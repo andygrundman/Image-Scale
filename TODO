@@ -1,0 +1,25 @@
+bg_color option for resize() if useful?
+Series-based resizing would be faster if implemented directly
+Input from memory
+Clean up memory allocation, don't use DESTROY to free memory but do it directly
+Add libjpeg/libpng memory allocations to memory_used if possible
+as_jpeg via custom memory manager
+Support < 24-bit BMP files
+Multiple calls to resize() on PNG at least doesn't work
+Improve image_downsize to not shift images by a few pixels
+Add fixed-point version of image_downsize
+
+Tests:
+  width/height all formats
+  Corrupt/invalid files in all formats, triggering longjmp's
+  memory_limit
+  JPEG with 3 components
+  JPEG with 1 component (grayscale)
+  PNG palette
+  PNG gray
+  PNG gray alpha
+  PNG RGB
+  PNG RGBA
+  PNG interlaced
+  PNG with tRNS
+  Big-endian machines

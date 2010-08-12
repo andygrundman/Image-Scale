@@ -1,0 +1,15 @@
+image *		T_image
+
+INPUT
+
+T_image
+	if (!(
+           SvROK ($arg)
+           && SvOBJECT (SvRV ($arg))
+           && sv_derived_from ($arg, \"Image::Scale::XS\")
+        ))
+          croak (\"object is not of type Image::Scale::XS\");
+        /**/
+        $var = (image *)SvPVX (SvRV ($arg));
+
+
