@@ -85,8 +85,6 @@ static inline fixed_t fixed_div(fixed_t x, fixed_t y) {
   return (fixed_t)(((int64_t)x << FRAC_BITS) / y);
 }
 
-static int get_fd_count(void) { return fd; }
-
 static inline fixed_t fixed_floor(fixed_t x) {
   return x & INT_MASK;
 }
