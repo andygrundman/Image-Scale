@@ -287,11 +287,7 @@ image_downsize_gm_fixed_point(image *im)
   
   columns = im->target_width;
   rows = im->target_height;
-  filter = im->filter;
-
-  if (!filter) {
-    filter = TriangleFilter;
-  }
+  filter = TriangleFilter; // Force Triangle for fixed-point mode, best quality and performance
   
   DEBUG_TRACE("Resizing with filter %d\n", filter);
   
