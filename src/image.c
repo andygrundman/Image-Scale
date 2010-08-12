@@ -219,7 +219,7 @@ image_downsize(image *im)
 	pix vcol;
 	int32_t i, j;
 	
-  float rx, ry, rx2, ry2;
+  float rx, ry;
   float width_scale, height_scale;
 	float red, green, blue, alpha;
 	int32_t half_square_width, half_square_height;
@@ -301,10 +301,11 @@ image_downsize(image *im)
 			
 			if (spixels != 0.0) {
         //DEBUG_TRACE("  spixels %.2f\n", spixels);
-  			red   /= spixels;
-  			green /= spixels;
-  			blue  /= spixels;
-  			alpha /= spixels;
+        spixels = 1 / spixels;
+  			red   *= spixels;
+  			green *= spixels;
+  			blue  *= spixels;
+  			alpha *= spixels;
   		}
   		
       if (red > 255.0)   red = 255.0;

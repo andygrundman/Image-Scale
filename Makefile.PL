@@ -1,5 +1,7 @@
 use strict;
 
+# XXX better static build support
+
 use Config;
 use ExtUtils::MakeMaker qw(WriteMakefile);
 use File::Spec::Functions;
@@ -7,7 +9,8 @@ use File::Spec::Functions;
 my (@INC, @LIBPATH, @LIBS);
 my $MYEXTLIB;
 
-my $DEFINES = '-Wall' unless $^O =~ /sun|solaris/i;
+my $DEFINES = '-O3'; # I tested -funroll-loops, it is slightly slower
+$DEFINES .= ' -Wall' unless $^O =~ /sun|solaris/i;
 $DEFINES .= ' -Wno-unused-value -Wno-format-security' unless $^O =~ /Win32|sun|solaris/i;
 unshift @INC, '-I. -I.. -Isrc -Iinclude';
 

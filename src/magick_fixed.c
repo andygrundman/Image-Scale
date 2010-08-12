@@ -20,7 +20,7 @@ static fixed_t TriangleFixed(const fixed_t x,const fixed_t ARGUNUSED(support))
   return 0;
 }
 
-static int
+static void
 image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, ImageInfo *destination,
   const fixed_t x_factor, const FilterInfoFixed *filter_info, ContributionInfoFixed *contribution)
 {
@@ -139,11 +139,9 @@ image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, Im
       );
     }
   }
-  
-  return 1;
 }
 
-static int
+static void
 image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, ImageInfo *destination,
   const fixed_t y_factor, const FilterInfoFixed *filter_info, ContributionInfoFixed *contribution)
 {
@@ -263,8 +261,6 @@ image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, Imag
       );
     }
   }
-  
-  return 1;
 }
 
 void
@@ -277,6 +273,7 @@ image_downsize_gm_fixed_point(image *im)
   int order;
   int filter;
   ContributionInfoFixed *contribution;
+  ImageInfo source, destination;
   
   static const FilterInfoFixed
     filters[SincFilter+1] =
@@ -316,42 +313,47 @@ image_downsize_gm_fixed_point(image *im)
   
   DEBUG_TRACE("order %d, x_factor %f, y_factor %f, support %f\n", order, x_factor, y_factor, support);
   
+  source.rows    = im->height;
+  source.columns = im->width;
+  source.buf     = im->pixbuf;
+  
   if (order) {
-    int status;
-    
     DEBUG_TRACE("Allocating temporary buffer size %d\n", im->target_width * im->height * sizeof(pix));
     New(0, im->tmpbuf, im->target_width * im->height, pix);
     
-    // TODO
+    // Resize horizontally from source -> tmp
+    destination.rows    = im->height;
+    destination.columns = im->target_width;
+    destination.buf     = im->tmpbuf;
+    image_downsize_gm_horizontal_filter_fixed_point(im, &source, &destination, float_to_fixed(x_factor), &filters[filter], contribution);
+    
+    // Resize vertically from tmp -> out
+    source.rows    = destination.rows;
+    source.columns = destination.columns;
+    source.buf     = destination.buf;
+    
+    destination.rows = im->target_height;
+    destination.buf  = im->outbuf;
+    image_downsize_gm_vertical_filter_fixed_point(im, &source, &destination, float_to_fixed(y_factor), &filters[filter], contribution);
   }
   else {
-    int status;
-    ImageInfo source, destination;
-    
     DEBUG_TRACE("Allocating temporary buffer size %d\n", im->width * im->target_height * sizeof(pix));
     New(0, im->tmpbuf, im->width * im->target_height, pix);
     
-    source.rows    = im->height;
-    source.columns = im->width;
-    source.buf     = im->pixbuf;
-    
+    // Resize vertically from source -> tmp
     destination.rows    = im->target_height;
     destination.columns = im->width;
     destination.buf     = im->tmpbuf;
+    image_downsize_gm_vertical_filter_fixed_point(im, &source, &destination, float_to_fixed(y_factor), &filters[filter], contribution);
+
+    // Resize horizontally from tmp -> out
+    source.rows    = destination.rows;
+    source.columns = destination.columns;
+    source.buf     = destination.buf;
     
-    // Resize vertically from source -> tmp
-    status = image_downsize_gm_vertical_filter_fixed_point(im, &source, &destination, float_to_fixed(y_factor), &filters[filter], contribution);
-    if (status == 1) {
-      // Resize horizontally from tmp -> out
-      source.rows    = destination.rows;
-      source.columns = destination.columns;
-      source.buf     = destination.buf;
-      
-      destination.columns = im->target_width;
-      destination.buf     = im->outbuf;
-      
-      status = image_downsize_gm_horizontal_filter_fixed_point(im, &source, &destination, float_to_fixed(x_factor), &filters[filter], contribution);
-    }
+    destination.columns = im->target_width;
+    destination.buf     = im->outbuf;
+    image_downsize_gm_horizontal_filter_fixed_point(im, &source, &destination, float_to_fixed(x_factor), &filters[filter], contribution);
   }
   
   Safefree(im->tmpbuf);

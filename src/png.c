@@ -110,7 +110,7 @@ image_png_interlace_pass(image *im, unsigned char *ptr, int start_y, int stride_
 void
 image_png_load(image *im)
 {
-  int bit_depth, color_type, num_passes, pass, x, y;
+  int bit_depth, color_type, num_passes, x, y;
   int ofs;
   unsigned char *ptr;
   
@@ -208,7 +208,7 @@ image_png_save(image *im, const char *path)
   png_structp png_ptr;
   png_infop info_ptr;
   FILE *out;
-  int color_space, i, x, y;
+  int i, x, y;
   unsigned char *ptr;
   
   if ((out = fopen(path, "wb")) == NULL) {

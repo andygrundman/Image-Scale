@@ -14,7 +14,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-// Fixed-point math routines
+// Fixed-point math routines (signed 19.12)
+// Largest positive value:  524287.999755859375
+// Smallest positive value: 0.000244140625
 
 #define FRAC_BITS      12
 #define INT_MASK       0x7FFFF000 // 20 bits

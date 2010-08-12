@@ -399,7 +399,7 @@ static float Triangle(const float x,const float ARGUNUSED(support))
   return(0.0);
 }
 
-static int
+static void
 image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *destination,
   const float x_factor, const FilterInfo *filter_info, ContributionInfo *contribution)
 {
@@ -519,11 +519,9 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
       );
     }
   }
-  
-  return 1;
 }
 
-static int
+static void
 image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *destination,
   const float y_factor, const FilterInfo *filter_info, ContributionInfo *contribution)
 {
@@ -647,8 +645,6 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
       );
     }
   }
-  
-  return 1;
 }
 
 void
@@ -660,6 +656,7 @@ image_downsize_gm(image *im)
   int order;
   int filter;
   ContributionInfo *contribution;
+  ImageInfo source, destination;
   
   static const FilterInfo
     filters[SincFilter+1] =
@@ -714,49 +711,47 @@ image_downsize_gm(image *im)
   
   DEBUG_TRACE("order %d, x_factor %f, y_factor %f, support %f\n", order, x_factor, y_factor, support);
   
+  source.rows    = im->height;
+  source.columns = im->width;
+  source.buf     = im->pixbuf;
+  
   if (order) {
-    int status;
-    
     DEBUG_TRACE("Allocating temporary buffer size %d\n", im->target_width * im->height * sizeof(pix));
     New(0, im->tmpbuf, im->target_width * im->height, pix);
     
-    // TODO
-  }
-  else {
-    int status;
-    ImageInfo source, destination;
+    // Resize horizontally from source -> tmp
+    destination.rows    = im->height;
+    destination.columns = im->target_width;
+    destination.buf     = im->tmpbuf;
+    image_downsize_gm_horizontal_filter(im, &source, &destination, x_factor, &filters[filter], contribution);
     
+    // Resize vertically from tmp -> out
+    source.rows    = destination.rows;
+    source.columns = destination.columns;
+    source.buf     = destination.buf;
+    
+    destination.rows = im->target_height;
+    destination.buf  = im->outbuf;
+    image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution);    
+  }
+  else {    
     DEBUG_TRACE("Allocating temporary buffer size %d\n", im->width * im->target_height * sizeof(pix));
     New(0, im->tmpbuf, im->width * im->target_height, pix);
     
-    source.rows    = im->height;
-    source.columns = im->width;
-    source.buf     = im->pixbuf;
-    
+    // Resize vertically from source -> tmp
     destination.rows    = im->target_height;
     destination.columns = im->width;
     destination.buf     = im->tmpbuf;
+    image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution);
+
+    // Resize horizontally from tmp -> out
+    source.rows    = destination.rows;
+    source.columns = destination.columns;
+    source.buf     = destination.buf;
     
-    // Resize vertically from source -> tmp
-    status = image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution);
-    if (status == 1) {
-      // Resize horizontally from tmp -> out
-      source.rows    = destination.rows;
-      source.columns = destination.columns;
-      source.buf     = destination.buf;
-      
-      destination.columns = im->target_width;
-      destination.buf     = im->outbuf;
-      
-      status = image_downsize_gm_horizontal_filter(im, &source, &destination, x_factor, &filters[filter], contribution);
-    }
-    
-    /*
-    // XXX save vertical resize test
-    im->target_width = im->width;
-    im->outbuf = im->tmpbuf;
-    image_jpeg_save(im, "vertical.jpg", 100);
-    */
+    destination.columns = im->target_width;
+    destination.buf     = im->outbuf;
+    image_downsize_gm_horizontal_filter(im, &source, &destination, x_factor, &filters[filter], contribution);
   }
   
   Safefree(im->tmpbuf);
