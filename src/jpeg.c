@@ -204,16 +204,49 @@ image_jpeg_load(image *im)
   }
 }
 
+static void
+image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
+{
+  JSAMPROW row_pointer[1];
+  int row_stride;
+  unsigned char *data;
+  int i, x;
+  
+  cinfo->image_width      = im->target_width;
+  cinfo->image_height     = im->target_height;
+  cinfo->input_components = 3; // XXX grayscale?
+  cinfo->in_color_space   = JCS_RGB; // XXX grayscale?
+  
+  jpeg_set_defaults(cinfo);
+  jpeg_set_quality(cinfo, quality, TRUE);
+  jpeg_start_compress(cinfo, TRUE);
+  
+  row_stride = cinfo->image_width * 3;
+  New(0, data, row_stride, unsigned char);
+  
+  i = 0;
+  while (cinfo->next_scanline < cinfo->image_height) {
+    for (x = 0; x < cinfo->image_width; x++) {
+      data[x + x + x]     = COL_RED(  im->outbuf[i]);
+      data[x + x + x + 1] = COL_GREEN(im->outbuf[i]);
+      data[x + x + x + 2] = COL_BLUE( im->outbuf[i]);
+      i++;
+    }
+    row_pointer[0] = data;
+    jpeg_write_scanlines(cinfo, row_pointer, 1);
+  }
+  
+  jpeg_finish_compress(cinfo);
+  jpeg_destroy_compress(cinfo);
+  Safefree(data);
+}
+
 void
 image_jpeg_save(image *im, const char *path, int quality)
 {
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
-  JSAMPROW row_pointer[1];
   FILE *out;
-  int row_stride;
-  unsigned char *data;
-  int i, x;
   
   if ((out = fopen(path, "wb")) == NULL) {
     croak("Image::Scale cannot open %s for writing", path);
@@ -223,35 +256,9 @@ image_jpeg_save(image *im, const char *path, int quality)
   jpeg_create_compress(&cinfo);
   jpeg_stdio_dest(&cinfo, out);
   
-  cinfo.image_width      = im->target_width;
-  cinfo.image_height     = im->target_height;
-  cinfo.input_components = 3; // XXX grayscale?
-  cinfo.in_color_space   = JCS_RGB; // XXX grayscale?
-  
-  jpeg_set_defaults(&cinfo);
-  jpeg_set_quality(&cinfo, quality, TRUE);
-  jpeg_start_compress(&cinfo, TRUE);
-  
-  row_stride = cinfo.image_width * 3;
-  New(0, data, row_stride, unsigned char);
-  
-  i = 0;
-  while (cinfo.next_scanline < cinfo.image_height) {
-    for (x = 0; x < cinfo.image_width; x++) {
-      data[x + x + x]     = COL_RED(  im->outbuf[i]);
-      data[x + x + x + 1] = COL_GREEN(im->outbuf[i]);
-      data[x + x + x + 2] = COL_BLUE( im->outbuf[i]);
-      i++;
-    }
-    row_pointer[0] = data;
-    jpeg_write_scanlines(&cinfo, row_pointer, 1);
-  }
-  
-  jpeg_finish_compress(&cinfo);
+  image_jpeg_compress(im, &cinfo, quality);
+
   fclose(out);
-  
-  Safefree(data);
-  jpeg_destroy_compress(&cinfo);
 }
 
 void
@@ -259,44 +266,13 @@ image_jpeg_to_sv(image *im, int quality, SV *sv_buf)
 {
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
-  JSAMPROW row_pointer[1];
-  int row_stride;
-  unsigned char *data;
-  int i, x;
   struct sv_dst_mgr dst;
   
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_compress(&cinfo);
   image_jpeg_sv_dest(&cinfo, &dst, sv_buf);
   
-  cinfo.image_width      = im->target_width;
-  cinfo.image_height     = im->target_height;
-  cinfo.input_components = 3; // XXX grayscale?
-  cinfo.in_color_space   = JCS_RGB; // XXX grayscale?
-  
-  jpeg_set_defaults(&cinfo);
-  jpeg_set_quality(&cinfo, quality, TRUE);
-  jpeg_start_compress(&cinfo, TRUE);
-  
-  row_stride = cinfo.image_width * 3;
-  New(0, data, row_stride, unsigned char);
-  
-  i = 0;
-  while (cinfo.next_scanline < cinfo.image_height) {
-    for (x = 0; x < cinfo.image_width; x++) {
-      data[x + x + x]     = COL_RED(  im->outbuf[i]);
-      data[x + x + x + 1] = COL_GREEN(im->outbuf[i]);
-      data[x + x + x + 2] = COL_BLUE( im->outbuf[i]);
-      i++;
-    }
-    row_pointer[0] = data;
-    jpeg_write_scanlines(&cinfo, row_pointer, 1);
-  }
-  
-  jpeg_finish_compress(&cinfo);
-  
-  Safefree(data);
-  jpeg_destroy_compress(&cinfo);
+  image_jpeg_compress(im, &cinfo, quality);
 }
 
 void
