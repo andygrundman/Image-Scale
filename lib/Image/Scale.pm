@@ -2,13 +2,12 @@ package Image::Scale;
 
 use strict;
 
-use constant JPEG_QUALITY        => 90;
+use constant JPEG_QUALITY              => 90;
 
-use constant IMAGE_SCALE_TYPE_DEFAULT  => 0;
-use constant IMAGE_SCALE_TYPE_GD       => 1;
-use constant IMAGE_SCALE_TYPE_GD_FIXED => 2;
-use constant IMAGE_SCALE_TYPE_GM       => 3;
-use constant IMAGE_SCALE_TYPE_GM_FIXED => 4;
+use constant IMAGE_SCALE_TYPE_GD       => 0;
+use constant IMAGE_SCALE_TYPE_GD_FIXED => 1;
+use constant IMAGE_SCALE_TYPE_GM       => 2;
+use constant IMAGE_SCALE_TYPE_GM_FIXED => 3;
 
 our $VERSION = '0.01';
 

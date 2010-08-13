@@ -47,7 +47,7 @@ image_init(HV *self, image *im)
   im->target_height = 0;
   im->keep_aspect   = 0;
   im->rotate        = 0;
-  im->resize_type   = IMAGE_SCALE_TYPE_DEFAULT;
+  im->resize_type   = IMAGE_SCALE_TYPE_GD;
   im->filter        = 0;
   
   im->cinfo         = NULL;
@@ -176,9 +176,6 @@ image_resize(image *im)
   
   // Resize
   switch (im->resize_type) {
-    case IMAGE_SCALE_TYPE_DEFAULT:
-      image_downsize(im);
-      break;
     case IMAGE_SCALE_TYPE_GD:
       image_downsize_gd(im);
       break;
@@ -210,119 +207,6 @@ static inline void
 put_pix(image *im, int32_t x, int32_t y, pix col)
 {
 	im->outbuf[(y * im->target_width) + x] = col;
-}
-
-void
-image_downsize(image *im)
-{
-  int32_t vx, vy;
-	pix vcol;
-	int32_t i, j;
-	
-  float rx, ry;
-  float width_scale, height_scale;
-	float red, green, blue, alpha;
-	int32_t half_square_width, half_square_height;
-  float round_width, round_height;
-
-	if ( (im->outbuf == NULL) || (im->pixbuf == NULL) )
-		return;
-
-	width_scale  = (float)im->width  / (float)im->target_width;
-	height_scale = (float)im->height / (float)im->target_height;
-
-	half_square_width  = (int32_t)(width_scale  / 2.0);
-	half_square_height = (int32_t)(height_scale / 2.0);
-	round_width  = (width_scale  / 2.0) - (float)half_square_width;
-	round_height = (height_scale / 2.0) - (float)half_square_height;
-	if (round_width  > 0.0)
-		half_square_width++;
-	else
-		round_width = 1.0;
-	if (round_height > 0.0)
-		half_square_height++;
-	else
-		round_height = 1.0;
-	
-	DEBUG_TRACE("width_scale %.2f, height_scale %.2f\n", width_scale, height_scale);
-  DEBUG_TRACE("half_square_width %d, half_square_height %d\n", half_square_width, half_square_height);
-  DEBUG_TRACE("round_width %.2f, round_height %.2f\n", round_width, round_height);
-
-	for (vy = 0; vy < im->target_height; vy++) {
-		for (vx = 0; vx < im->target_width; vx++) {
-      float spixels = 0.0;
-      red = green = blue = alpha = 0.0;
-      
-			rx  = vx * width_scale;
-			ry  = vy * height_scale;
-
-      DEBUG_TRACE("rx %.2f, ry %.2f ->\n", rx, ry);
-
-			for (j = 0; j < half_square_height << 1; j++)	{
-				for (i = 0; i < half_square_width << 1; i++) {
-          float pcontribution;
-          
-          int qx = ((int32_t)rx) - half_square_width + i;
-          int qy = ((int32_t)ry) - half_square_height + j;
-          
-          // Do not interpolate with negative pixels
-				  if (qx < 0 || qy < 0) {
-            continue;
-          }
-
-					if (((j == 0) || (j == (half_square_height << 1) - 1)) && 
-					   ((i == 0) || (i == (half_square_width << 1) - 1)))
-					{
-            pcontribution = round_width * round_height;
-					}
-					else if ((j == 0) || (j == (half_square_height << 1) - 1)) {
-            pcontribution = round_height;
-					}
-				  else if ((i == 0) || (i == (half_square_width << 1) - 1))	{
-            pcontribution = round_width;
-					}
-					else {
-            pcontribution = 1.0;
-					}
-					
-					vcol = get_pix(im, qx, qy);
-					
-					DEBUG_TRACE("  merging with pix %d, %d: src %x (%d %d %d %d), pcontribution: %.2f\n",
-            qx, qy, vcol,
-            COL_RED(vcol), COL_GREEN(vcol), COL_BLUE(vcol), COL_ALPHA(vcol), pcontribution);
-                  
-          red   += (float)COL_RED  (vcol) * pcontribution;
-          green += (float)COL_GREEN(vcol) * pcontribution;
-          blue  += (float)COL_BLUE (vcol) * pcontribution;
-          alpha += (float)COL_ALPHA(vcol) * pcontribution;
-          spixels += pcontribution;
-				}
-			}
-			
-			if (spixels != 0.0) {
-        //DEBUG_TRACE("  spixels %.2f\n", spixels);
-        spixels = 1 / spixels;
-  			red   *= spixels;
-  			green *= spixels;
-  			blue  *= spixels;
-  			alpha *= spixels;
-  		}
-  		
-      if (red > 255.0)   red = 255.0;
-      if (green > 255.0) green = 255.0;
-      if (blue > 255.0)  blue = 255.0;
-      if (alpha > 255.0) alpha = 255.0;
-			
-			DEBUG_TRACE("  -> %d, %d %x (%d %d %d %d)\n",
-        vx, vy, COL_FULL((int)red, (int)green, (int)blue, (int)alpha),
-        (int)red, (int)green, (int)blue, (int)alpha);
-
-			put_pix(
-			  im, vx, vy,
-				COL_FULL((int)red, (int)green, (int)blue, (int)alpha)
-			);
-		}
-	}
 }
 
 // Port of GD copyResampled

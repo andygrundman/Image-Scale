@@ -54,7 +54,6 @@ enum image_type {
 
 // Resize algorithms
 enum resize_type {
-  IMAGE_SCALE_TYPE_DEFAULT,
   IMAGE_SCALE_TYPE_GD,
   IMAGE_SCALE_TYPE_GD_FIXED,
   IMAGE_SCALE_TYPE_GM,
@@ -94,7 +93,6 @@ typedef struct {
 
 int image_init(HV *self, image *im);
 void image_resize(image *im);
-void image_downsize(image *im);
 void image_downsize_gd(image *im);
 void image_downsize_gd_fixed_point(image *im);
 void image_downsize_gm(image *im);

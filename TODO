@@ -1,9 +1,9 @@
 bg_color option for resize() if useful?
 Series-based resizing would be faster if implemented directly
-Input from memory
+Input from memory (all formats)
+GIF input
+as_png
 Clean up memory allocation, don't use DESTROY to free memory but do it directly
-Add libjpeg/libpng memory allocations to memory_used if possible
-as_jpeg via custom memory manager
 Support < 24-bit BMP files
 Multiple calls to resize() on PNG at least doesn't work
 Handle fixed-point overflow in GM fixed

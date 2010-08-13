@@ -39,11 +39,6 @@ my $make_gm = sub {
 };
 
 my $png = {
-    resize => sub {
-        my $img = Image::Scale->new($path);
-        $img->resize( { width => $width } );
-        $img->save_png('resize.png') if !$saves->{resize}++;
-    },
     resize_gd => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gd( { width => $width } );
@@ -97,11 +92,6 @@ my $png = {
 };
 
 my $jpg = {
-    resize => sub {
-        my $img = Image::Scale->new($path);
-        $img->resize( { width => $width } );
-        $img->save_jpeg('resize.jpg') if !$saves->{resize}++;
-    },
     resize_gd => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gd( { width => $width } );
