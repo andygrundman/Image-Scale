@@ -336,8 +336,6 @@ image_downsize_gd(image *im)
   int dstX = 0, dstY = 0, srcX = 0, srcY = 0;
   float width_scale, height_scale;
   
-  int g = 0;
-  
   int dstW = im->target_width;
   int dstH = im->target_height;
   int srcW = im->width;
@@ -359,12 +357,12 @@ image_downsize_gd(image *im)
   	  sx2 = (float)((x + 1) - dstX) * width_scale;
   	  sy = sy1;
   	  
-      DEBUG_TRACE("sx1 %.2f, sx2 %.2f, sy1 %.2f, sy2 %.2f\n", sx1, sx2, sy1, sy2); 
+      //DEBUG_TRACE("sx1 %.2f, sx2 %.2f, sy1 %.2f, sy2 %.2f\n", sx1, sx2, sy1, sy2); 
   	  
   	  do {
         float yportion;
         
-        DEBUG_TRACE("  yportion(sy %.2f, sy1 %.2f, sy2 %.2f) = ", sy, sy1, sy2);
+        //DEBUG_TRACE("  yportion(sy %.2f, sy1 %.2f, sy2 %.2f) = ", sy, sy1, sy2);
         if (floor2(sy) == floor2(sy1)) {
           yportion = 1.0 - (sy - floor2(sy));
     		  if (yportion > sy2 - sy1) {
@@ -378,7 +376,7 @@ image_downsize_gd(image *im)
         else {
           yportion = 1.0;
         }
-        DEBUG_TRACE("%.2f\n", yportion);
+        //DEBUG_TRACE("%.2f\n", yportion);
         
         sx = sx1;
         
@@ -406,11 +404,12 @@ image_downsize_gd(image *im)
     		  pcontribution = xportion * yportion;
   		  
     		  p = get_pix(im, (int32_t)sx + srcX, (int32_t)sy + srcY);
-          g++;
     		  
+    		  /*
     		  DEBUG_TRACE("  merging with pix %d, %d: src %x (%d %d %d %d), pcontribution %.2f\n",
             (int32_t)sx + srcX, (int32_t)sy + srcY,
             p, COL_RED(p), COL_GREEN(p), COL_BLUE(p), COL_ALPHA(p), pcontribution);
+          */
   		    
     		  red   += COL_RED(p)   * pcontribution;
     		  green += COL_GREEN(p) * pcontribution;
@@ -438,11 +437,11 @@ image_downsize_gd(image *im)
       if (blue > 255.0)  blue = 255.0;
       if (alpha > 255.0) alpha = 255.0;
       
-      
+      /*
       DEBUG_TRACE("  -> %d, %d %x (%d %d %d %d)\n",
         x, y, COL_FULL((int)red, (int)green, (int)blue, (int)alpha),
         (int)red, (int)green, (int)blue, (int)alpha);
-
+      */
       
       put_pix(
 			  im, x, y,
@@ -450,8 +449,6 @@ image_downsize_gd(image *im)
 			);
 	  }
 	}
-	
-  DEBUG_TRACE("inner loop count: %d\n", g);
 }
 
 void
@@ -483,13 +480,15 @@ image_downsize_gd_fixed_point(image *im)
       sx2 = fixed_mul(int_to_fixed((x + 1) - dstX), width_scale);  	  
   	  sy = sy1;
   	  
+  	  /*
       DEBUG_TRACE("sx1 %f, sx2 %f, sy1 %f, sy2 %f\n",
         fixed_to_float(sx1), fixed_to_float(sx2), fixed_to_float(sy1), fixed_to_float(sy2));
+      */
   	  
   	  do {
         fixed_t yportion;
         
-        DEBUG_TRACE("  yportion(sy %f, sy1 %f, sy2 %f) = ", fixed_to_float(sy), fixed_to_float(sy1), fixed_to_float(sy2));
+        //DEBUG_TRACE("  yportion(sy %f, sy1 %f, sy2 %f) = ", fixed_to_float(sy), fixed_to_float(sy1), fixed_to_float(sy2));
         
         if (fixed_floor(sy) == fixed_floor(sy1)) {
           yportion = FIXED_1 - (sy - fixed_floor(sy));
@@ -505,7 +504,7 @@ image_downsize_gd_fixed_point(image *im)
           yportion = FIXED_1;
         }
         
-        DEBUG_TRACE("%f\n", fixed_to_float(yportion));
+        //DEBUG_TRACE("%f\n", fixed_to_float(yportion));
         
         sx = sx1;
         
@@ -514,7 +513,7 @@ image_downsize_gd_fixed_point(image *im)
     		  fixed_t pcontribution;
     		  pix p;
     		  
-    		  DEBUG_TRACE("  xportion(sx %f, sx1 %f, sx2 %f) = ", fixed_to_float(sx), fixed_to_float(sx1), fixed_to_float(sx2));
+    		  //DEBUG_TRACE("  xportion(sx %f, sx1 %f, sx2 %f) = ", fixed_to_float(sx), fixed_to_float(sx1), fixed_to_float(sx2));
   		  
     		  if (fixed_floor(sx) == fixed_floor(sx1)) {
     	      xportion = FIXED_1 - (sx - fixed_floor(sx));
@@ -530,15 +529,17 @@ image_downsize_gd_fixed_point(image *im)
     		    xportion = FIXED_1;
     		  }
     		  
-    		  DEBUG_TRACE("%f\n", fixed_to_float(xportion));
+    		  //DEBUG_TRACE("%f\n", fixed_to_float(xportion));
   		  
     		  pcontribution = fixed_mul(xportion, yportion);
   		  
     		  p = get_pix(im, fixed_to_int(sx + srcX), fixed_to_int(sy + srcY));
     		  
+    		  /*
     		  DEBUG_TRACE("  merging with pix %d, %d: src %x (%d %d %d %d), pcontribution %f\n",
             fixed_to_int(sx + srcX), fixed_to_int(sy + srcY),
             p, COL_RED(p), COL_GREEN(p), COL_BLUE(p), COL_ALPHA(p), fixed_to_float(pcontribution));
+          */
   		    
           red   += fixed_mul(int_to_fixed(COL_RED(p)), pcontribution);
           green += fixed_mul(int_to_fixed(COL_GREEN(p)), pcontribution);
@@ -560,8 +561,10 @@ image_downsize_gd_fixed_point(image *im)
       }
       
       if (spixels != 0) {
+        /*
         DEBUG_TRACE("  rgba (%f %f %f %f) spixels %f\n",
           fixed_to_float(red), fixed_to_float(green), fixed_to_float(blue), fixed_to_float(alpha), fixed_to_float(spixels));
+        */
         
         spixels = fixed_div(FIXED_1, spixels);
         
@@ -577,9 +580,11 @@ image_downsize_gd_fixed_point(image *im)
       if (blue > FIXED_255)  blue = FIXED_255;
       if (alpha > FIXED_255) alpha = FIXED_255;
       
+      /*
       DEBUG_TRACE("  -> %d, %d %x (%d %d %d %d)\n",
         x, y, COL_FULL(fixed_to_int(red), fixed_to_int(green), fixed_to_int(blue), fixed_to_int(alpha)),
         fixed_to_int(red), fixed_to_int(green), fixed_to_int(blue), fixed_to_int(alpha));
+      */
       
       put_pix(
 			  im, x, y,

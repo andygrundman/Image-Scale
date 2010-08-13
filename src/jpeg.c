@@ -14,6 +14,73 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#define JPEG_BUFFER_SIZE 4096
+ 
+struct sv_dst_mgr {
+  struct jpeg_destination_mgr jdst;
+  SV *sv_buf;
+  JOCTET *buf;
+  JOCTET *off;
+};
+
+// Destination manager to copy compressed data to an SV
+static void
+sv_dst_mgr_init(j_compress_ptr cinfo)
+{
+  struct sv_dst_mgr *dst = (void *)cinfo->dest;
+  
+  New(0, dst->buf, JPEG_BUFFER_SIZE, JOCTET);
+  
+  dst->off = dst->buf;
+  dst->jdst.next_output_byte = dst->off;
+  dst->jdst.free_in_buffer = JPEG_BUFFER_SIZE;
+}
+
+static boolean
+sv_dst_mgr_empty(j_compress_ptr cinfo)
+{
+  struct sv_dst_mgr *dst = (void *)cinfo->dest;
+  
+  // Copy buffer to SV
+  sv_catpvn(dst->sv_buf, (char *)dst->buf, JPEG_BUFFER_SIZE);
+
+  // Reuse the buffer for the next chunk
+  dst->off = dst->buf;
+  dst->jdst.next_output_byte = dst->off;
+  dst->jdst.free_in_buffer = JPEG_BUFFER_SIZE;
+  
+  DEBUG_TRACE("sv_dst_mgr_empty, copied %d bytes\n", JPEG_BUFFER_SIZE);
+  
+  return TRUE;
+}
+
+static void
+sv_dst_mgr_term(j_compress_ptr cinfo)
+{
+  struct sv_dst_mgr *dst = (void *)cinfo->dest;
+
+  size_t sz = JPEG_BUFFER_SIZE - dst->jdst.free_in_buffer;
+  
+  if (sz > 0) {
+    // Copy buffer to SV
+    sv_catpvn(dst->sv_buf, (char *)dst->buf, sz);
+  }
+  
+  Safefree(dst->buf);
+
+  DEBUG_TRACE("sv_dst_mgr_term, copied %ld bytes\n", sz);
+}
+
+static void
+image_jpeg_sv_dest(j_compress_ptr cinfo, struct sv_dst_mgr *dst, SV *sv_buf)
+{
+  dst->sv_buf = sv_buf;
+  dst->jdst.init_destination = sv_dst_mgr_init;
+  dst->jdst.empty_output_buffer = sv_dst_mgr_empty;
+  dst->jdst.term_destination = sv_dst_mgr_term;
+  cinfo->dest = (void *)dst;
+}
+
 jmp_buf setjmp_buffer;
 static void
 libjpeg_error_handler(j_common_ptr cinfo)
@@ -182,6 +249,51 @@ image_jpeg_save(image *im, const char *path, int quality)
 	
 	jpeg_finish_compress(&cinfo);
   fclose(out);
+  
+  Safefree(data);
+  jpeg_destroy_compress(&cinfo);
+}
+
+void
+image_jpeg_to_sv(image *im, int quality, SV *sv_buf)
+{
+  struct jpeg_compress_struct cinfo;
+  struct jpeg_error_mgr jerr;
+  JSAMPROW row_pointer[1];
+  int row_stride;
+  unsigned char *data;
+  int i, x;
+  struct sv_dst_mgr dst;
+  
+  cinfo.err = jpeg_std_error(&jerr);
+  jpeg_create_compress(&cinfo);
+  image_jpeg_sv_dest(&cinfo, &dst, sv_buf);
+  
+  cinfo.image_width      = im->target_width;
+  cinfo.image_height     = im->target_height;
+  cinfo.input_components = 3; // XXX grayscale?
+  cinfo.in_color_space   = JCS_RGB; // XXX grayscale?
+  
+  jpeg_set_defaults(&cinfo);
+  jpeg_set_quality(&cinfo, quality, TRUE);
+  jpeg_start_compress(&cinfo, TRUE);
+  
+  row_stride = cinfo.image_width * 3;
+  New(0, data, row_stride, unsigned char);
+  
+  i = 0;
+  while (cinfo.next_scanline < cinfo.image_height) {
+    for (x = 0; x < cinfo.image_width; x++) {
+      data[x + x + x]     = COL_RED(  im->outbuf[i]);
+      data[x + x + x + 1] = COL_GREEN(im->outbuf[i]);
+      data[x + x + x + 2] = COL_BLUE( im->outbuf[i]);
+      i++;
+    }
+    row_pointer[0] = data;
+    jpeg_write_scanlines(&cinfo, row_pointer, 1);
+  }
+  
+  jpeg_finish_compress(&cinfo);
   
   Safefree(data);
   jpeg_destroy_compress(&cinfo);

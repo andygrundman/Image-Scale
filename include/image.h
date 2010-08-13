@@ -104,6 +104,7 @@ void image_finish(image *im);
 void image_jpeg_read_header(image *im, const char *file);
 void image_jpeg_load(image *im);
 void image_jpeg_save(image *im, const char *path, int quality);
+void image_jpeg_to_sv(image *im, int quality, SV *buf);
 void image_jpeg_finish(image *im);
 
 void image_bmp_read_header(image *im, const char *file);
@@ -115,4 +116,5 @@ void image_gif_load(image *im);
 void image_png_read_header(image *im, const char *file);
 void image_png_load(image *im);
 void image_png_save(image *im, const char *path);
+void image_png_to_buf(image *im, Buffer *buf);
 void image_png_finish(image *im);

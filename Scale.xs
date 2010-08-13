@@ -124,6 +124,24 @@ CODE:
   image_jpeg_save(im, SvPVX(path), quality);
 }
 
+SV *
+as_jpeg(HV *self, ...)
+CODE:
+{
+  image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
+  int quality = DEFAULT_JPEG_QUALITY;
+  
+  if (items == 2 && SvOK(ST(1))) {
+    quality = SvIV(ST(1));
+  }
+  
+  RETVAL = newSVpvn("", 0);
+  
+  image_jpeg_to_sv(im, quality, RETVAL);
+}
+OUTPUT:
+  RETVAL
+
 void
 save_png(HV *self, SV *path)
 CODE:
@@ -136,6 +154,22 @@ CODE:
   
   image_png_save(im, SvPVX(path));
 }
+
+SV *
+as_png(HV *self)
+CODE:
+{
+  image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
+  Buffer png_buf;
+  
+  image_png_to_buf(im, &png_buf);
+  
+  RETVAL = newSVpvn(buffer_ptr(&png_buf), buffer_len(&png_buf));
+  
+  buffer_free(&png_buf);
+}
+OUTPUT:
+  RETVAL
 
 void
 __cleanup(HV *self, image *im)

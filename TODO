@@ -6,8 +6,7 @@ Add libjpeg/libpng memory allocations to memory_used if possible
 as_jpeg via custom memory manager
 Support < 24-bit BMP files
 Multiple calls to resize() on PNG at least doesn't work
-Improve image_downsize to not shift images by a few pixels
-Add fixed-point version of image_downsize
+Handle fixed-point overflow in GM fixed
 
 Tests:
   width/height all formats
