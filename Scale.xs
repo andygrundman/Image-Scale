@@ -160,13 +160,10 @@ as_png(HV *self)
 CODE:
 {
   image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
-  Buffer png_buf;
+
+  RETVAL = newSVpvn("", 0);
   
-  image_png_to_buf(im, &png_buf);
-  
-  RETVAL = newSVpvn(buffer_ptr(&png_buf), buffer_len(&png_buf));
-  
-  buffer_free(&png_buf);
+  image_png_to_sv(im, RETVAL);
 }
 OUTPUT:
   RETVAL

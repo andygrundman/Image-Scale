@@ -21,9 +21,13 @@ my $height = shift;
 
     #$img->save_jpeg('resized.jpg');
     
-    open my $fh, '>', 'resized.jpg';
-    print $fh $img->as_jpeg();
-    close $fh;
+    #open my $fh, '>', 'resized.jpg';
+    #print $fh $img->as_jpeg();
+    #close $fh;
     
     #$img->save_png('resized.png');
+
+    #open my $fh, '>', 'resized.png';
+    #print $fh $img->as_png();
+    #close $fh;
 }

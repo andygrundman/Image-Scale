@@ -202,39 +202,11 @@ image_png_load(image *im)
   png_read_end(im->png_ptr, im->info_ptr);
 }
 
-void
-image_png_save(image *im, const char *path)
+static void
+image_png_compress(image *im, png_structp png_ptr, png_infop info_ptr)
 {
-  png_structp png_ptr;
-  png_infop info_ptr;
-  FILE *out;
   int i, x, y;
   unsigned char *ptr;
-  
-  if ((out = fopen(path, "wb")) == NULL) {
-    croak("Image::Scale cannot open %s for writing", path);
-  }
-  
-  png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-  if (!png_ptr) {
-    fclose(out);
-    croak("Image::Scale could not initialize libpng");
-  }
-  
-  info_ptr = png_create_info_struct(png_ptr);
-  if (!info_ptr) {
-    png_destroy_write_struct(&png_ptr, NULL);
-    fclose(out);
-    croak("Image::Scale could not initialize libpng");
-  }
-  
-  if (setjmp( png_jmpbuf(png_ptr) )) {
-    png_destroy_write_struct(&png_ptr, &info_ptr);
-    fclose(out);
-    return;
-  }
-  
-  png_init_io(png_ptr, out);
   
   /* XXX
   switch (im->channels) {
@@ -269,8 +241,87 @@ image_png_save(image *im, const char *path)
   png_write_end(png_ptr, info_ptr);
   
   png_destroy_write_struct(&png_ptr, &info_ptr);
+}
+
+void
+image_png_save(image *im, const char *path)
+{
+  png_structp png_ptr;
+  png_infop info_ptr;
+  FILE *out;
+  
+  if ((out = fopen(path, "wb")) == NULL) {
+    croak("Image::Scale cannot open %s for writing", path);
+  }
+  
+  png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  if (!png_ptr) {
+    fclose(out);
+    croak("Image::Scale could not initialize libpng");
+  }
+  
+  info_ptr = png_create_info_struct(png_ptr);
+  if (!info_ptr) {
+    png_destroy_write_struct(&png_ptr, NULL);
+    fclose(out);
+    croak("Image::Scale could not initialize libpng");
+  }
+  
+  if (setjmp( png_jmpbuf(png_ptr) )) {
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    fclose(out);
+    return;
+  }
+  
+  png_init_io(png_ptr, out);
+  
+  image_png_compress(im, png_ptr, info_ptr);
   
   fclose(out);
+}
+
+static void
+image_png_write_sv(png_structp png_ptr, png_bytep data, png_size_t len)
+{
+  SV *sv_buf = (SV *)png_get_io_ptr(png_ptr);
+  
+  // Copy buffer to SV
+  sv_catpvn(sv_buf, (char *)data, len);
+  
+  DEBUG_TRACE("image_png_write_sv copied %ld bytes\n", len);
+}
+
+static void
+image_png_flush_sv(png_structp png_ptr)
+{
+  // Nothing
+}
+
+void
+image_png_to_sv(image *im, SV *sv_buf)
+{
+  png_structp png_ptr;
+  png_infop info_ptr;
+  
+  png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  if (!png_ptr) {
+    croak("Image::Scale could not initialize libpng");
+  }
+  
+  info_ptr = png_create_info_struct(png_ptr);
+  if (!info_ptr) {
+    png_destroy_write_struct(&png_ptr, NULL);
+    croak("Image::Scale could not initialize libpng");
+  }
+  
+  if (setjmp( png_jmpbuf(png_ptr) )) {
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    return;
+  }
+  
+  png_set_write_fn(png_ptr, sv_buf, image_png_write_sv, image_png_flush_sv);
+  
+  image_png_compress(im, png_ptr, info_ptr);
 }
 
 void
