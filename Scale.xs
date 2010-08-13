@@ -48,12 +48,14 @@ CODE:
   
   if (!im->target_height) {
     // Only width was specified
-    im->target_height = im->height / im->width * im->target_width;
+    im->target_height = (int)((float)im->height / im->width * im->target_width);
   }
   else if (!im->target_width) {
     // Only height was specified
-    im->target_width = im->width / im->height * im->target_height;
+    im->target_width = (int)((float)im->width / im->height * im->target_height);
   }
+  
+  DEBUG_TRACE("Resizing from %d x %d -> %d x %d\n", im->width, im->height, im->target_width, im->target_height);
   
   if (my_hv_exists(opts, "keep_aspect"))
     im->keep_aspect = SvIV(*(my_hv_fetch(opts, "keep_aspect")));

@@ -20,6 +20,9 @@ static fixed_t TriangleFixed(const fixed_t x,const fixed_t ARGUNUSED(support))
   return 0;
 }
 
+// Other filters could be ported but they are increasingly more complex and
+// include a lot of multiplication, divisison, and/or trig functions
+
 static void
 image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, ImageInfo *destination,
   const fixed_t x_factor, const FilterInfoFixed *filter_info, ContributionInfoFixed *contribution)
