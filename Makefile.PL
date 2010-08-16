@@ -15,7 +15,7 @@ $DEFINES .= ' -Wno-unused-value -Wno-format-security' unless $^O =~ /Win32|sun|s
 unshift @INC, '-I. -I.. -Isrc -Iinclude';
 
 if ( $^O !~ /Win32/ ) {
-    push @LIBS, '-ljpeg -lpng -lz';
+    push @LIBS, '-ljpeg -lpng -lz -lgif';
     
     # Check for Sparc ReadyNAS to enable ASM code
     if ( -e '/etc/raidiator_version' ) {

@@ -45,3 +45,6 @@
 
 int _check_buf(PerlIO *infile, Buffer *buf, int size, int min_size);
 off_t _file_size(PerlIO *infile);
+#ifdef AUDIO_SCAN_DEBUG
+void hexdump(unsigned char *data, uint32_t size);
+#endif

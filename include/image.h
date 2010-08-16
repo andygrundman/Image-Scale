@@ -15,6 +15,7 @@
  */
 
 #include <jpeglib.h>
+#include <gif_lib.h>
 
 #define DEFAULT_JPEG_QUALITY 90
 
@@ -89,6 +90,8 @@ typedef struct {
 	
   png_structp png_ptr;
   png_infop info_ptr;
+  
+  GifFileType *gif;
 } image;
 
 int image_init(HV *self, image *im);

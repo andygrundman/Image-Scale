@@ -108,3 +108,48 @@ _file_size(PerlIO *infile)
   return 0;
 #endif
 }
+
+#ifdef AUDIO_SCAN_DEBUG
+void
+hexdump(unsigned char *data, uint32_t size)
+{
+  unsigned char c;
+  int i = 1;
+  int n;
+  char bytestr[4] = {0};
+  char hexstr[ 16*3 + 5] = {0};
+  char charstr[16*1 + 5] = {0};
+  
+  if (!size) {
+    return;
+  }
+  
+  for (n = 0; n < size; n++) {
+    c = data[n];
+
+    /* store hex str (for left side) */
+    snprintf(bytestr, sizeof(bytestr), "%02x ", c);
+    strncat(hexstr, bytestr, sizeof(hexstr)-strlen(hexstr)-1);
+
+    /* store char str (for right side) */
+    if (c < 21 || c > 0x7E) {
+      c = '.';
+    }
+    snprintf(bytestr, sizeof(bytestr), "%c", c);
+    strncat(charstr, bytestr, sizeof(charstr)-strlen(charstr)-1);
+
+    if (i % 16 == 0) { 
+      /* line completed */
+      PerlIO_printf(PerlIO_stderr(), "%-50.50s  %s\n", hexstr, charstr);
+      hexstr[0] = 0;
+      charstr[0] = 0;
+    }
+    i++;
+  }
+
+  if (strlen(hexstr) > 0) {
+    /* print rest of buffer if not empty */
+    PerlIO_printf(PerlIO_stderr(), "%-50.50s  %s\n", hexstr, charstr);
+  }
+}
+#endif

@@ -2,11 +2,11 @@ bg_color option for resize() if useful?
 Series-based resizing would be faster if implemented directly
 Input from memory (all formats)
 GIF input
-as_png
 Clean up memory allocation, don't use DESTROY to free memory but do it directly
 Support < 24-bit BMP files
 Multiple calls to resize() on PNG at least doesn't work
 Handle fixed-point overflow in GM fixed
+Small memory leak in GIF, probably in libgif
 
 Tests:
   width/height all formats
@@ -21,4 +21,7 @@ Tests:
   PNG RGBA
   PNG interlaced
   PNG with tRNS
+  GIF non-interlaced
+  GIF transparent
+  GIF interlaced
   Big-endian machines

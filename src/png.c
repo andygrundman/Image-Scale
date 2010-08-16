@@ -45,49 +45,6 @@ image_png_read_header(image *im, const char *file)
   im->has_alpha = 1;
 }
 
-void
-hexdump(unsigned char *data, uint32_t size)
-{
-  unsigned char c;
-  int i = 1;
-  int n;
-  char bytestr[4] = {0};
-  char hexstr[ 16*3 + 5] = {0};
-  char charstr[16*1 + 5] = {0};
-  
-  if (!size) {
-    return;
-  }
-  
-  for (n = 0; n < size; n++) {
-    c = data[n];
-
-    /* store hex str (for left side) */
-    snprintf(bytestr, sizeof(bytestr), "%02x ", c);
-    strncat(hexstr, bytestr, sizeof(hexstr)-strlen(hexstr)-1);
-
-    /* store char str (for right side) */
-    if (c < 21 || c > 0x7E) {
-      c = '.';
-    }
-    snprintf(bytestr, sizeof(bytestr), "%c", c);
-    strncat(charstr, bytestr, sizeof(charstr)-strlen(charstr)-1);
-
-    if (i % 16 == 0) { 
-      /* line completed */
-      PerlIO_printf(PerlIO_stderr(), "%-50.50s  %s\n", hexstr, charstr);
-      hexstr[0] = 0;
-      charstr[0] = 0;
-    }
-    i++;
-  }
-
-  if (strlen(hexstr) > 0) {
-    /* print rest of buffer if not empty */
-    PerlIO_printf(PerlIO_stderr(), "%-50.50s  %s\n", hexstr, charstr);
-  }
-}
-
 static void
 image_png_interlace_pass(image *im, unsigned char *ptr, int start_y, int stride_y, int start_x, int stride_x)
 {

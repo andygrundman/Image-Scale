@@ -17,6 +17,7 @@
 #include "image.h"
 #include "fixed.h"
 
+// XXX support for compiling-out formats not wanted
 #include "jpeg.c"
 #include "bmp.c"
 #include "gif.c"
@@ -53,6 +54,7 @@ image_init(HV *self, image *im)
   im->cinfo         = NULL;
   im->png_ptr       = NULL;
   im->info_ptr      = NULL;
+  im->gif           = NULL;
   
   Newz(0, im->buf, sizeof(Buffer), Buffer);
   buffer_init(im->buf, 1024);
@@ -150,6 +152,7 @@ image_resize(image *im)
       break;
     case GIF:
       image_gif_load(im);
+      image_gif_finish(im);
       break;
     case BMP:
       image_bmp_load(im);
@@ -492,6 +495,8 @@ image_finish(image *im)
       image_png_finish(im);
       break;
     case GIF:
+      image_gif_finish(im);
+      break;
     case BMP:
       // Nothing
       break;
