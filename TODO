@@ -1,12 +1,13 @@
 bg_color option for resize() if useful?
 Series-based resizing would be faster if implemented directly
 Input from memory (all formats)
-GIF input
 Clean up memory allocation, don't use DESTROY to free memory but do it directly
-Support < 24-bit BMP files
+Support < 24-bit BMP files, RLE compression
 Multiple calls to resize() on PNG at least doesn't work
 Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
+Move GD code to gd.c
+Update docs
 
 Tests:
   width/height all formats
@@ -21,7 +22,12 @@ Tests:
   PNG RGBA
   PNG interlaced
   PNG with tRNS
+  PNG 16-bit
   GIF non-interlaced
   GIF transparent
   GIF interlaced
+  BMP 24-bit
+  BMP 32-bit (alpha)
+  BMP 16, 8, 4, 1-bit
+  BMP RLE compressed
   Big-endian machines

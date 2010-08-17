@@ -94,6 +94,18 @@ typedef struct {
   GifFileType *gif;
 } image;
 
+static inline pix
+get_pix(image *im, int32_t x, int32_t y)
+{
+	return (im->pixbuf[(y * im->width) + x]);
+}
+
+static inline void
+put_pix(image *im, int32_t x, int32_t y, pix col)
+{
+	im->outbuf[(y * im->target_width) + x] = col;
+}
+
 int image_init(HV *self, image *im);
 void image_resize(image *im);
 void image_downsize_gd(image *im);
