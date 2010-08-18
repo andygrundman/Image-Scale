@@ -48,13 +48,13 @@ image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, Im
     stop    = fixed_to_int(MIN(center + support + FIXED_HALF, int_to_fixed(source->columns)));
     density = 0;
     
-    DEBUG_TRACE("x %d: center %.2f, start %d, stop %d\n", x, center, start, stop);
+    //DEBUG_TRACE("x %d: center %.2f, start %d, stop %d\n", x, center, start, stop);
     
     for (n = 0; n < (stop - start); n++) {
       contribution[n].pixel = start + n;
       contribution[n].weight = filter_info->function(fixed_mul(scale, (int_to_fixed(start) + int_to_fixed(n) - center + FIXED_HALF)), filter_info->support);
       density += contribution[n].weight;
-      DEBUG_TRACE("  contribution[%d].pixel %d, weight %.2f, density %.2f\n", n, contribution[n].pixel, contribution[n].weight, density);
+      //DEBUG_TRACE("  contribution[%d].pixel %d, weight %.2f, density %.2f\n", n, contribution[n].pixel, contribution[n].weight, density);
     }
     
     if ((density != 0) && (density != FIXED_1)) {
@@ -64,7 +64,7 @@ image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, Im
       density = fixed_div(FIXED_1, density);
       for (i = 0; i < n; i++) {
         contribution[i].weight = fixed_mul(contribution[i].weight, density);
-        DEBUG_TRACE("  normalize contribution[%d].weight to %.2f\n", i, fixed_to_float(contribution[i].weight));
+        //DEBUG_TRACE("  normalize contribution[%d].weight to %.2f\n", i, fixed_to_float(contribution[i].weight));
       }
     }
     
@@ -89,10 +89,12 @@ image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, Im
           // but this produces bad results, so we use only the weight
           //transparency_coeff = weight * ((float)COL_ALPHA(p) / 255);
           
+          /*
           DEBUG_TRACE("    merging with pix (%d, %d) @ %d (%d %d %d %d) weight %.2f\n",
             x, contribution[i].pixel, j,
             COL_RED(p), COL_GREEN(p), COL_BLUE(p), COL_ALPHA(p),
             fixed_to_float(weight));
+          */
           
           red   += fixed_mul(weight, int_to_fixed(COL_RED(p)));
           green += fixed_mul(weight, int_to_fixed(COL_GREEN(p)));
@@ -127,12 +129,14 @@ image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, Im
         alpha = FIXED_255;
       }
       
+      /*
       DEBUG_TRACE("  -> (%d, %d) @ %d (%d %d %d %d)\n",
         x, y, (y * destination->columns) + x,
         ROUND_FIXED_TO_INT(red),
         ROUND_FIXED_TO_INT(green),
         ROUND_FIXED_TO_INT(blue),
         ROUND_FIXED_TO_INT(alpha));
+      */
       
       destination->buf[(y * destination->columns) + x] = COL_FULL(
         ROUND_FIXED_TO_INT(red),
@@ -172,13 +176,13 @@ image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, Imag
     stop    = fixed_to_int(MIN(center + support + FIXED_HALF, int_to_fixed(source->rows)));
     density = 0;
     
-    DEBUG_TRACE("y %d: center %.2f, start %d, stop %d\n", y, fixed_to_float(center), start, stop);
+    //DEBUG_TRACE("y %d: center %.2f, start %d, stop %d\n", y, fixed_to_float(center), start, stop);
     
     for (n = 0; n < (stop - start); n++) {
       contribution[n].pixel = start + n;
       contribution[n].weight = filter_info->function(fixed_mul(scale, (int_to_fixed(start) + int_to_fixed(n) - center + FIXED_HALF)), filter_info->support);
       density += contribution[n].weight;
-      DEBUG_TRACE("  contribution[%d].pixel %d, weight %.2f, density %.2f\n", n, contribution[n].pixel, contribution[n].weight, density);
+      //DEBUG_TRACE("  contribution[%d].pixel %d, weight %.2f, density %.2f\n", n, contribution[n].pixel, contribution[n].weight, density);
     }
     
     if ((density != 0) && (density != FIXED_1)) {
@@ -188,7 +192,7 @@ image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, Imag
       density = fixed_div(FIXED_1, density);
       for (i = 0; i < n; i++) {
         contribution[i].weight = fixed_mul(contribution[i].weight, density);
-        DEBUG_TRACE("  normalize contribution[%d].weight to %.2f\n", i, fixed_to_float(contribution[i].weight));
+        //DEBUG_TRACE("  normalize contribution[%d].weight to %.2f\n", i, fixed_to_float(contribution[i].weight));
       }
     }
     
@@ -213,10 +217,12 @@ image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, Imag
           // but this produces bad results, so we use only the weight
           //transparency_coeff = weight * ((float)COL_ALPHA(p) / 255);
           
+          /*
           DEBUG_TRACE("    merging with pix (%d, %d) @ %d (%d %d %d %d) weight %.2f\n",
             x, contribution[i].pixel, j,
             COL_RED(p), COL_GREEN(p), COL_BLUE(p), COL_ALPHA(p),
             fixed_to_float(weight));
+          */
           
           red   += fixed_mul(weight, int_to_fixed(COL_RED(p)));
           green += fixed_mul(weight, int_to_fixed(COL_GREEN(p)));
@@ -236,10 +242,12 @@ image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, Imag
           weight = contribution[i].weight;
           p = source->buf[j];
         
+          /*
           DEBUG_TRACE("    merging with pix (%d, %d) @ %d (%d %d %d) weight %.2f\n",
             x, contribution[i].pixel, j,
             COL_RED(p), COL_GREEN(p), COL_BLUE(p),
             fixed_to_float(weight));
+          */
           
           red   += fixed_mul(weight, int_to_fixed(COL_RED(p)));
           green += fixed_mul(weight, int_to_fixed(COL_GREEN(p)));
@@ -249,12 +257,14 @@ image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, Imag
         alpha = FIXED_255;
       }
       
+      /*
       DEBUG_TRACE("  -> (%d, %d) @ %d (%d %d %d %d)\n",
         x, y, (y * destination->columns) + x,
         ROUND_FIXED_TO_INT(red),
         ROUND_FIXED_TO_INT(green),
         ROUND_FIXED_TO_INT(blue),
         ROUND_FIXED_TO_INT(alpha));
+      */
       
       destination->buf[(y * destination->columns) + x] = COL_FULL(
         ROUND_FIXED_TO_INT(red),

@@ -14,6 +14,16 @@ image_downsize_gd(image *im)
   int srcW = im->width;
   int srcH = im->height;
   
+  if (im->height_padding) {
+    dstY = im->height_padding;
+    dstH = im->height_inner;
+  }
+  
+  if (im->width_padding) {
+    dstX = im->width_padding;
+    dstW = im->width_inner;
+  }
+  
   width_scale = (float)srcW / dstW;
   height_scale = (float)srcH / dstH;
   
@@ -136,6 +146,16 @@ image_downsize_gd_fixed_point(image *im)
   int dstH = im->target_height;
   int srcW = im->width;
   int srcH = im->height;
+  
+  if (im->height_padding) {
+    dstY = im->height_padding;
+    dstH = im->height_inner;
+  }
+  
+  if (im->width_padding) {
+    dstX = im->width_padding;
+    dstW = im->width_inner;
+  }
   
   width_scale = fixed_div(int_to_fixed(srcW), int_to_fixed(dstW));
   height_scale = fixed_div(int_to_fixed(srcH), int_to_fixed(dstH));

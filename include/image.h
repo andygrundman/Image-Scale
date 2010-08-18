@@ -68,6 +68,10 @@ typedef struct {
   int32_t type;
 	int32_t width;
 	int32_t height;
+  int32_t width_padding;  // empty padding pixels to leave to maintain aspect
+  int32_t width_inner;    // width of inner area when maintaining aspect
+  int32_t height_padding;
+  int32_t height_inner;
   int32_t flipped;
   int32_t bpp;
   int32_t channels;

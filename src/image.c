@@ -36,23 +36,27 @@ image_init(HV *self, image *im)
   unsigned char *bptr;
   char *file = SvPVX(*(my_hv_fetch(self, "file")));
   
-  im->pixbuf        = NULL;
-  im->outbuf        = NULL;
-  im->fh            = IoIFP(sv_2io(*(my_hv_fetch(self, "_fh"))));
-  im->type          = UNKNOWN;
-  im->width         = 0;
-  im->height        = 0;
-  im->flipped       = 0;
-  im->bpp           = 0;
-  im->channels      = 0;
-  im->has_alpha     = 0;
-  im->memory_limit  = 0;
-  im->target_width  = 0;
-  im->target_height = 0;
-  im->keep_aspect   = 0;
-  im->rotate        = 0;
-  im->resize_type   = IMAGE_SCALE_TYPE_GD;
-  im->filter        = 0;
+  im->pixbuf         = NULL;
+  im->outbuf         = NULL;
+  im->fh             = IoIFP(sv_2io(*(my_hv_fetch(self, "_fh"))));
+  im->type           = UNKNOWN;
+  im->width          = 0;
+  im->height         = 0;
+  im->width_padding  = 0;
+  im->width_inner    = 0;
+  im->height_padding = 0;
+  im->height_inner   = 0;
+  im->flipped        = 0;
+  im->bpp            = 0;
+  im->channels       = 0;
+  im->has_alpha      = 0;
+  im->memory_limit   = 0;
+  im->target_width   = 0;
+  im->target_height  = 0;
+  im->keep_aspect    = 0;
+  im->rotate         = 0;
+  im->resize_type    = IMAGE_SCALE_TYPE_GD;
+  im->filter         = 0;
   
   im->cinfo         = NULL;
   im->png_ptr       = NULL;
@@ -180,6 +184,28 @@ image_resize(image *im)
   New(0, im->outbuf, size, pix);
   im->memory_used += size;
   
+  // Determine padding if necessary
+  if (im->keep_aspect) {
+    float source_ar = 1.0 * im->width / im->height;
+    float dest_ar   = 1.0 * im->target_width / im->target_height;
+    
+    if (source_ar >= dest_ar) {
+      im->height_padding = (int)((im->target_height - (im->target_width / source_ar)) / 2);
+      im->height_inner   = (int)(im->target_width / source_ar);
+    }
+    else {
+      im->width_padding = (int)((im->target_width - (im->target_height * source_ar)) / 2);
+      im->width_inner   = (int)(im->target_height * source_ar);
+    }
+    
+    // Fill new space with transparent pixels (all zeros)
+    // XXX bgcolor support if writing JPEG
+    Zero(im->outbuf, size, pix);
+    
+    DEBUG_TRACE("Using width padding %d, inner width %d, height padding %d, inner height %d\n",
+      im->width_padding, im->width_inner, im->height_padding, im->height_inner);
+  }
+
   // Resize
   switch (im->resize_type) {
     case IMAGE_SCALE_TYPE_GD:

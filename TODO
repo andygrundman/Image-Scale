@@ -6,8 +6,8 @@ Support < 24-bit BMP files, RLE compression
 Multiple calls to resize() on PNG at least doesn't work
 Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
-Move GD code to gd.c
 Update docs
+keep_aspect support for GM
 
 Tests:
   width/height all formats
