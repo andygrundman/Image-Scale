@@ -17,10 +17,30 @@
 static int InterlacedOffset[] = { 0, 4, 2, 1 };
 static int InterlacedJumps[] = { 8, 8, 4, 2 };
 
+static int
+image_gif_read_sv(GifFileType *gif, GifByteType *data, int len)
+{
+  image *im = (image *)gif->UserData;
+
+  memcpy(data, SvPVX(im->sv_data) + im->sv_offset, len);
+  im->sv_offset += len;
+
+  DEBUG_TRACE("image_gif_read_sv read %d bytes\n", len);
+  
+  return len;
+}
+
 void
 image_gif_read_header(image *im, const char *file)
-{  
-  im->gif = DGifOpenFileName((char *)file);
+{
+  if (file != NULL) {
+    im->gif = DGifOpenFileName((char *)file);
+  }
+  else {
+    im->sv_offset = 0;
+    im->gif = DGifOpen(im, image_gif_read_sv);
+  }
+  
   if (im->gif == NULL) {
     PrintGifError();
     croak("Image::Scale unable to open GIF file %s\n", file);

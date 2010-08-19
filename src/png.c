@@ -57,8 +57,8 @@ image_png_read_header(image *im, const char *file)
   }
   else {
     // Reading from SV
-    png_set_read_fn(im->png_ptr, im, image_png_read_sv);
     im->sv_offset = 0;
+    png_set_read_fn(im->png_ptr, im, image_png_read_sv);
   }
   
   png_read_info(im->png_ptr, im->info_ptr);
