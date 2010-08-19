@@ -16,18 +16,27 @@ XSLoader::load('Image::Scale', $VERSION);
 
 sub new {
     my $class = shift;
+    my $self;
     
     my $file = shift || die "Image::Scale->new requires an image path\n";
     my $opts = shift || {};
     
-    open my $fh, '<', $file || die "Image::Scale couldn't open $file: $!\n";
-    binmode $fh;
+    if ( ref $file eq 'SCALAR' ) {
+        $self = bless {
+            data => $file,
+            %{$opts},
+        };
+    }
+    else {
+        open my $fh, '<', $file || die "Image::Scale couldn't open $file: $!\n";
+        binmode $fh;
     
-    my $self = bless {
-        file => $file,
-        _fh  => $fh,
-        %{$opts},
-    };
+        $self = bless {
+            file => $file,
+            _fh  => $fh,
+            %{$opts},
+        };
+    }
     
     # XS init, determine the file type and image size
     $self->{_image} = $self->__init();
@@ -57,7 +66,7 @@ sub DESTROY {
     # XS cleanup
     $self->__cleanup( $self->{_image} );
     
-    close $self->{_fh};
+    close $self->{_fh} if $self->{_fh};
 }
 
 1;
@@ -85,10 +94,13 @@ JPEG and PNG for output.
 
 =head1 METHODS
 
-=head2 new( $PATH )
+=head2 new( $PATH or \$DATA )
 
 Initialize a new Image::Scale object from PATH, which may be any valid JPEG,
 GIF, PNG, or BMP file.
+
+Raw image data may also be passed in as a scalar reference.  Using a file path
+is recommended when possible as this is more efficient and requires less memory.
 
 =head2 width()
 

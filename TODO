@@ -8,9 +8,11 @@ Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
 Update docs
 keep_aspect support for GM
+Support new($file, $offset, $length), may be tricky with library stdio readers?
 
 Tests:
   width/height all formats
+  keep_aspect, both width/height padding
   Corrupt/invalid files in all formats, triggering longjmp's
   memory_limit
   JPEG with 3 components

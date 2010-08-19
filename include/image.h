@@ -65,6 +65,8 @@ typedef struct {
   Buffer  *buf;
   PerlIO  *fh;
   FILE    *stdio_fp;
+  SV      *sv_data;
+  int32_t sv_offset;
   int32_t type;
 	int32_t width;
 	int32_t height;

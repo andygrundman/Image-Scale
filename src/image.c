@@ -34,12 +34,27 @@ int
 image_init(HV *self, image *im)
 {
   unsigned char *bptr;
-  char *file = SvPVX(*(my_hv_fetch(self, "file")));
+  char *file = NULL;
+  
+  if (my_hv_exists(self, "file")) {
+    // Input from file
+    file = SvPVX(*(my_hv_fetch(self, "file")));
+    im->fh = IoIFP(sv_2io(*(my_hv_fetch(self, "_fh"))));
+  }
+  else {
+    // Input from scalar ref
+    im->fh = NULL;
+    im->sv_data = *(my_hv_fetch(self, "data"));
+    if (SvROK(im->sv_data))
+      im->sv_data = SvRV(im->sv_data);
+    else
+      croak("data is not a scalar ref\n");
+  }
   
   im->pixbuf         = NULL;
   im->outbuf         = NULL;
-  im->fh             = IoIFP(sv_2io(*(my_hv_fetch(self, "_fh"))));
   im->type           = UNKNOWN;
+  im->sv_offset      = 0;
   im->width          = 0;
   im->height         = 0;
   im->width_padding  = 0;
@@ -68,13 +83,18 @@ image_init(HV *self, image *im)
   im->memory_used = 1024;
   
   // Determine type of file from magic bytes
-  
-  if ( !_check_buf(im->fh, im->buf, 8, 1024) ) {
-    // Free mem in case croak is trapped
-    buffer_free(im->buf);
-    Safefree(im->buf);
-    im->buf = NULL;
-    croak("Unable to read image header for %s", file);
+  if (im->fh != NULL) {
+    if ( !_check_buf(im->fh, im->buf, 8, 1024) ) {
+      // Free mem in case croak is trapped
+      buffer_free(im->buf);
+      Safefree(im->buf);
+      im->buf = NULL;
+      croak("Unable to read image header for %s", file);
+    }
+  }
+  else {
+    im->sv_offset = MIN(sv_len(im->sv_data), 1024);
+    buffer_append(im->buf, SvPVX(im->sv_data), im->sv_offset);
   }
   
   bptr = buffer_ptr(im->buf);

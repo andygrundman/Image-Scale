@@ -87,9 +87,24 @@ image_bmp_load(image *im)
       if (blen < im->channels) {
         // Load more from the buffer
         buffer_consume(im->buf, buffer_len(im->buf) - blen);
-        if ( !_check_buf(im->fh, im->buf, im->channels, 8192) ) {
-          croak("Image::Scale unable to read entire BMP file\n");
+        
+        if (im->fh != NULL) {
+          // Read from file
+          if ( !_check_buf(im->fh, im->buf, im->channels, 8192) ) {
+            croak("Image::Scale unable to read entire BMP file\n");
+          }
         }
+        else {
+          // Read from scalar
+          int svbuflen = MIN(sv_len(im->sv_data) - im->sv_offset, 8192);
+          
+          if (!svbuflen) {
+            croak("Image::Scale unable to read entire BMP file\n");
+          }
+          buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, svbuflen);
+          im->sv_offset += svbuflen;
+        }
+        
         bptr = buffer_ptr(im->buf);
         blen = buffer_len(im->buf);
         offset = 0;
