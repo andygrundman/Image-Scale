@@ -14,12 +14,28 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+static void
+image_png_read_sv(png_structp png_ptr, png_bytep data, png_size_t len)
+{
+ image *im = (image *)png_get_io_ptr(png_ptr);
+
+ png_memcpy(data, SvPVX(im->sv_data) + im->sv_offset, len);
+ im->sv_offset += len;
+
+ DEBUG_TRACE("image_png_read_sv read %ld bytes\n", len);
+}
+
 void
 image_png_read_header(image *im, const char *file)
 {
-  if ( (im->stdio_fp = fopen(file, "rb")) == NULL ) {
-		croak("Image::Scale could not open %s for reading", file);
+  if (file != NULL) {
+    if ( (im->stdio_fp = fopen(file, "rb")) == NULL ) {
+  		croak("Image::Scale could not open %s for reading", file);
+  	}
 	}
+	else {
+    im->stdio_fp = NULL;
+  }
 	
   im->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if ( !im->png_ptr )
@@ -35,7 +51,15 @@ image_png_read_header(image *im, const char *file)
     return;
   }
   
-  png_init_io(im->png_ptr, im->stdio_fp);
+  if (file != NULL) {
+    // Reading from file
+    png_init_io(im->png_ptr, im->stdio_fp);
+  }
+  else {
+    // Reading from SV
+    png_set_read_fn(im->png_ptr, im, image_png_read_sv);
+    im->sv_offset = 0;
+  }
   
   png_read_info(im->png_ptr, im->info_ptr);
   
@@ -287,7 +311,8 @@ image_png_finish(image *im)
   if (im->png_ptr != NULL) {
     png_destroy_read_struct(&im->png_ptr, &im->info_ptr, NULL);
     im->png_ptr = NULL;
-  
-    fclose(im->stdio_fp);
   }
+  
+  if (im->stdio_fp != NULL)
+    fclose(im->stdio_fp);
 }

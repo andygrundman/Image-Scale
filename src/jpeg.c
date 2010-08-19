@@ -297,8 +297,8 @@ image_jpeg_finish(image *im)
     Safefree(im->cinfo);
     im->cinfo = NULL;
     im->memory_used -= sizeof(struct jpeg_decompress_struct);
-  
-    if (im->stdio_fp != NULL)
-      fclose(im->stdio_fp);
   }
+  
+  if (im->stdio_fp != NULL)
+    fclose(im->stdio_fp);
 }
