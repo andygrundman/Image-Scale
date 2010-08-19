@@ -15,7 +15,7 @@
  */
 
 #define JPEG_BUFFER_SIZE 4096
- 
+
 struct sv_dst_mgr {
   struct jpeg_destination_mgr jdst;
   SV *sv_buf;
@@ -94,9 +94,14 @@ void
 image_jpeg_read_header(image *im, const char *file)
 {
   struct jpeg_error_mgr pub;
- 
-  if ( (im->stdio_fp = fopen(file, "rb")) == NULL ) {
-    croak("Image::Scale could not open %s for reading", file);
+  
+  if (file != NULL) {
+    if ( (im->stdio_fp = fopen(file, "rb")) == NULL ) {
+      croak("Image::Scale could not open %s for reading", file);
+    }
+  }
+  else {
+    im->stdio_fp = NULL;
   }
   
   Newz(0, im->cinfo, sizeof(struct jpeg_decompress_struct), struct jpeg_decompress_struct);
@@ -110,7 +115,16 @@ image_jpeg_read_header(image *im, const char *file)
   }
   
   jpeg_create_decompress(im->cinfo);
-  jpeg_stdio_src(im->cinfo, im->stdio_fp);  
+  
+  if (file != NULL) {
+    // Reading from file
+    jpeg_stdio_src(im->cinfo, im->stdio_fp);
+  }
+  else {
+    // Reading from SV
+    jpeg_mem_src(im->cinfo, (unsigned char *)SvPVX(im->sv_data), sv_len(im->sv_data));
+  }
+  
   jpeg_read_header(im->cinfo, TRUE);
   
   im->width    = im->cinfo->image_width;
@@ -284,6 +298,7 @@ image_jpeg_finish(image *im)
     im->cinfo = NULL;
     im->memory_used -= sizeof(struct jpeg_decompress_struct);
   
-    fclose(im->stdio_fp);
+    if (im->stdio_fp != NULL)
+      fclose(im->stdio_fp);
   }
 }
