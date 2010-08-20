@@ -49,7 +49,21 @@ my $png = {
         $img->resize_gd_fixed_point( { width => $width } );
         $img->save_png('resize_gd_fixed_point.png') if !$saves->{resize_gd_fixed}++;
     },
+    #$make_gm->('Point', 'png'),
+    #$make_gm->('Box', 'png'),
     $make_gm->('Triangle', 'png'),
+    #$make_gm->('Hermite', 'png'),
+    #$make_gm->('Hanning', 'png'),
+    #$make_gm->('Hamming', 'png'),
+    #$make_gm->('Blackman', 'png'),
+    #$make_gm->('Gaussian', 'png'),
+    #$make_gm->('Quadratic', 'png'),
+    #$make_gm->('Cubic', 'png'),
+    #$make_gm->('Catrom', 'png'),
+    #$make_gm->('Mitchell', 'png'),
+    #$make_gm->('Lanczos', 'png'),
+    #$make_gm->('Bessel', 'png'),
+    #$make_gm->('Sinc', 'png'),
     gm_fixed => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gm_fixed_point( { width => $width } );
@@ -88,7 +102,21 @@ my $jpg = {
         $img->resize_gd_fixed_point( { width => $width } );
         $img->save_jpeg('resize_gd_fixed_point.jpg') if !$saves->{resize_gd_fixed}++;
     },
+    #$make_gm->('Point', 'jpg'),
+    #$make_gm->('Box', 'jpg'),
     $make_gm->('Triangle', 'jpg'),
+    #$make_gm->('Hermite', 'jpg'),
+    #$make_gm->('Hanning', 'jpg'),
+    #$make_gm->('Hamming', 'jpg'),
+    #$make_gm->('Blackman', 'jpg'),
+    #$make_gm->('Gaussian', 'jpg'),
+    #$make_gm->('Quadratic', 'jpg'),
+    #$make_gm->('Cubic', 'jpg'),
+    #$make_gm->('Catrom', 'jpg'),
+    #$make_gm->('Mitchell', 'jpg'),
+    #$make_gm->('Lanczos', 'jpg'),
+    #$make_gm->('Bessel', 'jpg'),
+    #$make_gm->('Sinc', 'jpg'),
     gm_fixed => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gm_fixed_point( { width => $width } );
