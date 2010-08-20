@@ -361,6 +361,8 @@ image_jpeg_finish(image *im)
     im->memory_used -= sizeof(struct jpeg_decompress_struct);
   }
   
-  if (im->stdio_fp != NULL)
+  if (im->stdio_fp != NULL) {
     fclose(im->stdio_fp);
+    im->stdio_fp = NULL;
+  }
 }
