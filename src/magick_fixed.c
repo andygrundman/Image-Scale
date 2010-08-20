@@ -25,7 +25,7 @@ static fixed_t TriangleFixed(const fixed_t x,const fixed_t ARGUNUSED(support))
 
 static void
 image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, ImageInfo *destination,
-  const fixed_t x_factor, const FilterInfoFixed *filter_info, ContributionInfoFixed *contribution)
+  const fixed_t x_factor, const FilterInfoFixed *filter_info, ContributionInfoFixed *contribution, int rotate)
 {
   fixed_t scale, support;
   int x;
@@ -138,19 +138,44 @@ image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, Im
         ROUND_FIXED_TO_INT(alpha));
       */
       
-      destination->buf[(y * destination->columns) + x] = COL_FULL(
-        ROUND_FIXED_TO_INT(red),
-        ROUND_FIXED_TO_INT(green),
-        ROUND_FIXED_TO_INT(blue),
-        ROUND_FIXED_TO_INT(alpha)
-      );
+      if (rotate && im->orientation != ORIENTATION_NORMAL) {
+        int ox, oy; // new destination pixel coordinates after rotating
+
+        image_get_rotated_coords(im, x, y, &ox, &oy);
+
+        if (im->orientation >= 5) {
+          // 90 and 270 rotations, width/height are swapped
+          destination->buf[(oy * destination->rows) + ox] = COL_FULL(
+            ROUND_FIXED_TO_INT(red),
+            ROUND_FIXED_TO_INT(green),
+            ROUND_FIXED_TO_INT(blue),
+            ROUND_FIXED_TO_INT(alpha)
+          );
+        }
+        else {
+          destination->buf[(oy * destination->columns) + ox] = COL_FULL(
+            ROUND_FIXED_TO_INT(red),
+            ROUND_FIXED_TO_INT(green),
+            ROUND_FIXED_TO_INT(blue),
+            ROUND_FIXED_TO_INT(alpha)
+          );
+        }
+      }
+      else { 
+        destination->buf[(y * destination->columns) + x] = COL_FULL(
+          ROUND_FIXED_TO_INT(red),
+          ROUND_FIXED_TO_INT(green),
+          ROUND_FIXED_TO_INT(blue),
+          ROUND_FIXED_TO_INT(alpha)
+        );
+      }
     }
   }
 }
 
 static void
 image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, ImageInfo *destination,
-  const fixed_t y_factor, const FilterInfoFixed *filter_info, ContributionInfoFixed *contribution)
+  const fixed_t y_factor, const FilterInfoFixed *filter_info, ContributionInfoFixed *contribution, int rotate)
 {
   fixed_t scale, support;
   int y;
@@ -266,12 +291,37 @@ image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, Imag
         ROUND_FIXED_TO_INT(alpha));
       */
       
-      destination->buf[(y * destination->columns) + x] = COL_FULL(
-        ROUND_FIXED_TO_INT(red),
-        ROUND_FIXED_TO_INT(green),
-        ROUND_FIXED_TO_INT(blue),
-        ROUND_FIXED_TO_INT(alpha)
-      );
+      if (rotate && im->orientation != ORIENTATION_NORMAL) {
+        int ox, oy; // new destination pixel coordinates after rotating
+
+        image_get_rotated_coords(im, x, y, &ox, &oy);
+
+        if (im->orientation >= 5) {
+          // 90 and 270 rotations, width/height are swapped
+          destination->buf[(oy * destination->rows) + ox] = COL_FULL(
+            ROUND_FIXED_TO_INT(red),
+            ROUND_FIXED_TO_INT(green),
+            ROUND_FIXED_TO_INT(blue),
+            ROUND_FIXED_TO_INT(alpha)
+          );
+        }
+        else {
+          destination->buf[(oy * destination->columns) + ox] = COL_FULL(
+            ROUND_FIXED_TO_INT(red),
+            ROUND_FIXED_TO_INT(green),
+            ROUND_FIXED_TO_INT(blue),
+            ROUND_FIXED_TO_INT(alpha)
+          );
+        }
+      }
+      else { 
+        destination->buf[(y * destination->columns) + x] = COL_FULL(
+          ROUND_FIXED_TO_INT(red),
+          ROUND_FIXED_TO_INT(green),
+          ROUND_FIXED_TO_INT(blue),
+          ROUND_FIXED_TO_INT(alpha)
+        );
+      }
     }
   }
 }
@@ -334,7 +384,7 @@ image_downsize_gm_fixed_point(image *im)
     destination.rows    = im->height;
     destination.columns = im->target_width;
     destination.buf     = im->tmpbuf;
-    image_downsize_gm_horizontal_filter_fixed_point(im, &source, &destination, float_to_fixed(x_factor), &filters[filter], contribution);
+    image_downsize_gm_horizontal_filter_fixed_point(im, &source, &destination, float_to_fixed(x_factor), &filters[filter], contribution, 0);
     
     // Resize vertically from tmp -> out
     source.rows    = destination.rows;
@@ -343,7 +393,7 @@ image_downsize_gm_fixed_point(image *im)
     
     destination.rows = im->target_height;
     destination.buf  = im->outbuf;
-    image_downsize_gm_vertical_filter_fixed_point(im, &source, &destination, float_to_fixed(y_factor), &filters[filter], contribution);
+    image_downsize_gm_vertical_filter_fixed_point(im, &source, &destination, float_to_fixed(y_factor), &filters[filter], contribution, 1);
   }
   else {
     DEBUG_TRACE("Allocating temporary buffer size %d\n", im->width * im->target_height * sizeof(pix));
@@ -353,7 +403,7 @@ image_downsize_gm_fixed_point(image *im)
     destination.rows    = im->target_height;
     destination.columns = im->width;
     destination.buf     = im->tmpbuf;
-    image_downsize_gm_vertical_filter_fixed_point(im, &source, &destination, float_to_fixed(y_factor), &filters[filter], contribution);
+    image_downsize_gm_vertical_filter_fixed_point(im, &source, &destination, float_to_fixed(y_factor), &filters[filter], contribution, 0);
 
     // Resize horizontally from tmp -> out
     source.rows    = destination.rows;
@@ -362,7 +412,7 @@ image_downsize_gm_fixed_point(image *im)
     
     destination.columns = im->target_width;
     destination.buf     = im->outbuf;
-    image_downsize_gm_horizontal_filter_fixed_point(im, &source, &destination, float_to_fixed(x_factor), &filters[filter], contribution);
+    image_downsize_gm_horizontal_filter_fixed_point(im, &source, &destination, float_to_fixed(x_factor), &filters[filter], contribution, 1);
   }
   
   Safefree(im->tmpbuf);

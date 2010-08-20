@@ -126,11 +126,32 @@ image_downsize_gd(image *im)
         (int)red, (int)green, (int)blue, (int)alpha);
       */
       
-      put_pix(
-			  im, x, y,
-				COL_FULL((int)red, (int)green, (int)blue, (int)alpha)
-			);
-	  }
+      if (im->orientation != ORIENTATION_NORMAL) {
+        int ox, oy; // new destination pixel coordinates after rotating
+        
+        image_get_rotated_coords(im, x, y, &ox, &oy);
+        
+        if (im->orientation >= 5) {
+          // 90 and 270 rotations, width/height are swapped so we have to use alternate put_pix method
+          put_pix_rotated(
+            im, ox, oy, im->target_height,
+            COL_FULL((int)red, (int)green, (int)blue, (int)alpha)
+          );
+        }
+        else {
+          put_pix(
+            im, ox, oy,
+            COL_FULL((int)red, (int)green, (int)blue, (int)alpha)
+          );
+        }
+      }
+      else { 
+        put_pix(
+          im, x, y,
+          COL_FULL((int)red, (int)green, (int)blue, (int)alpha)
+        );
+      }
+    }
 	}
 }
 
@@ -279,10 +300,31 @@ image_downsize_gd_fixed_point(image *im)
         fixed_to_int(red), fixed_to_int(green), fixed_to_int(blue), fixed_to_int(alpha));
       */
       
-      put_pix(
-			  im, x, y,
-				COL_FULL(fixed_to_int(red), fixed_to_int(green), fixed_to_int(blue), fixed_to_int(alpha))
-			);
+      if (im->orientation != ORIENTATION_NORMAL) {
+        int ox, oy; // new destination pixel coordinates after rotating
+        
+        image_get_rotated_coords(im, x, y, &ox, &oy);
+        
+        if (im->orientation >= 5) {
+          // 90 and 270 rotations, width/height are swapped so we have to use alternate put_pix method
+          put_pix_rotated(
+            im, ox, oy, im->target_height,
+            COL_FULL(fixed_to_int(red), fixed_to_int(green), fixed_to_int(blue), fixed_to_int(alpha))
+          );
+        }
+        else {
+          put_pix(
+            im, ox, oy,
+            COL_FULL(fixed_to_int(red), fixed_to_int(green), fixed_to_int(blue), fixed_to_int(alpha))
+          );
+        }
+      }
+      else { 
+        put_pix(
+          im, x, y,
+          COL_FULL(fixed_to_int(red), fixed_to_int(green), fixed_to_int(blue), fixed_to_int(alpha))
+        );
+      }
 	  }
 	}
 }

@@ -60,8 +60,10 @@ CODE:
   if (my_hv_exists(opts, "keep_aspect"))
     im->keep_aspect = SvIV(*(my_hv_fetch(opts, "keep_aspect")));
   
-  if (my_hv_exists(opts, "rotate"))
-    im->rotate = SvIV(*(my_hv_fetch(opts, "rotate")));
+  if (my_hv_exists(opts, "ignore_exif")) {
+    if (SvIV(*(my_hv_fetch(opts, "ignore_exif"))) != 0)
+      im->orientation = ORIENTATION_NORMAL;
+  }
   
   if (my_hv_exists(opts, "memory_limit"))
     im->memory_limit = SvIV(*(my_hv_fetch(opts, "memory_limit")));

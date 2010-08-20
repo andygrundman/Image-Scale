@@ -11,7 +11,7 @@ my $MYEXTLIB;
 
 my $DEFINES = '-O2'; # I tested -funroll-loops, it is slightly slower
 $DEFINES .= ' -Wall' unless $^O =~ /sun|solaris/i;
-$DEFINES .= ' -Wno-unused-value -Wno-format-security' unless $^O =~ /Win32|sun|solaris/i;
+$DEFINES .= ' -Wno-unused-value -Wno-format-security -Winline' unless $^O =~ /Win32|sun|solaris/i;
 unshift @INC, '-I. -I.. -Isrc -Iinclude';
 
 if ( $^O !~ /Win32/ ) {

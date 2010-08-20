@@ -61,6 +61,19 @@ enum resize_type {
   IMAGE_SCALE_TYPE_GM_FIXED,
 };
 
+// Exif Orientation
+enum orientation {
+  ORIENTATION_UNKNOWN,
+  ORIENTATION_NORMAL,
+  ORIENTATION_MIRROR_HORIZ,
+  ORIENTATION_180,
+  ORIENTATION_MIRROR_VERT,
+  ORIENTATION_MIRROR_HORIZ_270_CW,
+  ORIENTATION_90_CW,
+  ORIENTATION_MIRROR_HORIZ_90_CW,
+  ORIENTATION_270_CW
+};
+
 typedef struct {
   Buffer  *buf;
   PerlIO  *fh;
@@ -78,6 +91,7 @@ typedef struct {
   int32_t bpp;
   int32_t channels;
   int32_t has_alpha;
+  int32_t orientation;
   int32_t memory_used;
 	pix     *pixbuf; // Source image
   pix     *outbuf; // Resized image
@@ -88,7 +102,6 @@ typedef struct {
   int32_t target_width;
   int32_t target_height;
   int32_t keep_aspect;
-  int32_t rotate;
   int32_t resize_type;
   int32_t filter;
 	
@@ -112,6 +125,12 @@ put_pix(image *im, int32_t x, int32_t y, pix col)
 	im->outbuf[(y * im->target_width) + x] = col;
 }
 
+static inline void
+put_pix_rotated(image *im, int32_t x, int32_t y, int32_t rotated_width, pix col)
+{
+  im->outbuf[(y * rotated_width) + x] = col;
+}
+
 int image_init(HV *self, image *im);
 void image_resize(image *im);
 void image_downsize_gd(image *im);
@@ -119,6 +138,7 @@ void image_downsize_gd_fixed_point(image *im);
 void image_downsize_gm(image *im);
 void image_alloc(image *im, int width, int height);
 void image_finish(image *im);
+inline void image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy);
 
 void image_jpeg_read_header(image *im, const char *file);
 void image_jpeg_load(image *im);

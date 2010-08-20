@@ -1,13 +1,12 @@
 bg_color option for resize() if useful?
 Series-based resizing would be faster if implemented directly
-Input from memory (all formats)
 Support < 24-bit BMP files, RLE compression
 Multiple calls to resize() on PNG at least doesn't work
 Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
 Update docs
 keep_aspect support for GM
-Support new($file, $offset, $length), may be tricky with library stdio readers?
+Support new($file, $offset, $length) for images in audio files, would require Audio::Scan update to report image offset
 
 Tests:
   width/height all formats
@@ -16,6 +15,9 @@ Tests:
   memory_limit
   JPEG with 3 components
   JPEG with 1 component (grayscale)
+  JPEG w/ Exif little-endian (digital cameras)
+  JPEG w/ Exif normal orientation, 90, 180, 270, are the mirror ones ever used?
+  JPEG w/ Exif big-endian (iPhone camera)
   PNG palette
   PNG gray
   PNG gray alpha

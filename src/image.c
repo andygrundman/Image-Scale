@@ -65,11 +65,11 @@ image_init(HV *self, image *im)
   im->bpp            = 0;
   im->channels       = 0;
   im->has_alpha      = 0;
+  im->orientation    = ORIENTATION_NORMAL;
   im->memory_limit   = 0;
   im->target_width   = 0;
   im->target_height  = 0;
   im->keep_aspect    = 0;
-  im->rotate         = 0;
   im->resize_type    = IMAGE_SCALE_TYPE_GD;
   im->filter         = 0;
   
@@ -244,6 +244,15 @@ image_resize(image *im)
       croak("Image::Scale unknown resize type %d\n", im->resize_type);
   }
   
+  // If the image was rotated, swap the width/height if necessary
+  if (im->orientation >= 5) {
+    int tmp = im->target_height;
+    im->target_height = im->target_width;
+    im->target_width = tmp;
+    
+    DEBUG_TRACE("Image was rotated, output now %d x %d\n", im->target_width, im->target_height);
+  }
+  
   // After resizing we can release the source image memory
   Safefree(im->pixbuf);
   im->pixbuf = NULL;
@@ -283,4 +292,42 @@ image_finish(image *im)
   
   DEBUG_TRACE("Freed all memory, total used: %d\n", im->memory_used);
   im->memory_used = 0;
+}
+
+inline void
+image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy)
+{
+  switch (im->orientation) {
+    case ORIENTATION_MIRROR_HORIZ: // 2
+      *ox = im->target_width - 1 - x;
+      *oy = y;
+      break;
+    case ORIENTATION_180: // 3
+      *ox = im->target_width - 1 - x;
+      *oy = im->target_height - 1 - y;
+      break;
+    case ORIENTATION_MIRROR_VERT: // 4
+      *ox = x;
+      *oy = im->target_height - 1 - y;
+      break;
+    case ORIENTATION_MIRROR_HORIZ_270_CW: // 5
+      *ox = y;
+      *oy = x;
+      break;
+    case ORIENTATION_90_CW: // 6
+      *ox = im->target_height - 1 - y;
+      *oy = x;
+      break;
+    case ORIENTATION_MIRROR_HORIZ_90_CW: // 7
+      *ox = im->target_height - 1 - y;
+      *oy = im->target_width - 1 - x;
+      break;
+    case ORIENTATION_270_CW: // 8
+      *ox = y;
+      *oy = im->target_width - 1 - x;
+      break;
+    default:
+      croak("Image::Scale cannot rotate, unknown orientation value: %d\n", im->orientation);
+      break;
+  }
 }

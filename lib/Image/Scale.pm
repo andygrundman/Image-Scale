@@ -87,10 +87,25 @@ Image::Scale - Fast, high-quality image resizing
 
 =head1 DESCRIPTION
 
-TODO
+This module implements several resizing algorithms with a focus on low overhead,
+speed and minimal features. Algorithms available are:
+
+  GD's copyResampled
+  GD's copyResampled fixed-point (useful on embedded devices/NAS devices)
+  GraphicsMagick's assortment of resize filters
+  GraphicsMagick's Triangle filter in fixed-point
 
 Supported image formats include JPEG, GIF, PNG, and BMP for input, and
 JPEG and PNG for output.
+
+This module came about because we needed to improve the very slow performance of
+floating-point resizing algorithms on platforms without a floating-point
+unit, such as ARM devices like the SheevaPlug, and the Sparc-based ReadyNAS Duo.
+Previously it could take up to 14 seconds to resize using GD on the ReadyNAS but the
+conversion to fixed-point with a little assembly code brings this down to the range of 200ms.
+
+Normal platforms will also see improvement, by removing all of the GD overhead this
+version of copyResampled is around XXX times faster while also using less memory.
 
 =head1 METHODS
 
@@ -110,15 +125,47 @@ Returns the width of the original source image.
 
 Returns the height of the original source image.
 
-=head2 resize( \%OPTIONS )
+=head2 resize_*( \%OPTIONS )
 
-Resize the image. Options are specified in a hashref:
+The 4 resize methods available are:
+
+    resize_gd - This is GD's copyResampled algorithm (floating-point)
+    resize_gd_fixed_point - copyResampled (fixed-point)
+    resize_gm - GraphicsMagick, see below for filter options
+    resize_gm_fixed_point - GraphicsMagick, only the Triangle filter is available in fixed-point mode
+
+Options are specified in a hashref:
 
     width
     height
 
 At least one of width or height are required. If only one is supplied the
 image will retain the original aspect ratio.
+
+    filter
+
+For use with resize_gm() only.  Choose from the following filters, sorted in order
+from least to most CPU time.
+
+    Point
+    Box
+    Triangle
+    Hermite
+    Hanning
+    Hamming
+    Blackman
+    Gaussian
+    Quadratic
+    Cubic
+    Catrom
+    Mitchell
+    Lanczos
+    Bessel
+    Sinc
+
+Be sure to do your own comparisons for quality. If no filter is
+specified the default is Lanczos if downsizing, and Mitchell for upsizing or if the image is
+transparent.
 
     keep_aspect => 1
 
@@ -127,10 +174,10 @@ original aspect ratio of the source as well as center the image when resizing in
 a different aspect ratio. For best results, images altered in this way should be
 saved as PNG which will automatically add the necessary transparency around the image.
 
-    rotate => 1
+    ignore_exif => 1
 
-If a JPEG image contains an EXIF tag with orientation info, the image will be rotated
-accordingly during resizing.
+By default, if a JPEG image contains an EXIF tag with orientation info, the image will be
+rotated accordingly during resizing.  To disable this feature, set ignore_exif => 1.
 
     memory_limit => $limit_in_bytes
 
@@ -156,6 +203,10 @@ Saves the resized image as a PNG to PATH. Transparency is preserved when saving 
 =head2 as_png()
 
 Returns the resized PNG image as scalar data.
+
+=head1 PERFORMANCE
+
+
 
 =head1 SEE ALSO
 

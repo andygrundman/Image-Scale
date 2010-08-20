@@ -401,7 +401,7 @@ static float Triangle(const float x,const float ARGUNUSED(support))
 
 static void
 image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *destination,
-  const float x_factor, const FilterInfo *filter_info, ContributionInfo *contribution)
+  const float x_factor, const FilterInfo *filter_info, ContributionInfo *contribution, int rotate)
 {
   float scale, support;
   int x;
@@ -466,10 +466,12 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
           // but this produces bad results, so we use only the weight
           //transparency_coeff = weight * ((float)COL_ALPHA(p) / 255);
           
+          /*
           DEBUG_TRACE("    merging with pix (%d, %d) @ %d (%d %d %d %d) weight %.2f\n",
             x, contribution[i].pixel, j,
             COL_RED(p), COL_GREEN(p), COL_BLUE(p), COL_ALPHA(p),
             weight);
+          */
           
           red   += weight * COL_RED(p);
           green += weight * COL_GREEN(p);
@@ -504,26 +506,53 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
         alpha = 255.0;
       }
       
+      /*
       DEBUG_TRACE("  -> (%d, %d) @ %d (%d %d %d %d)\n",
         x, y, (y * destination->columns) + x,
         ROUND_FLOAT_TO_INT(red),
         ROUND_FLOAT_TO_INT(green),
         ROUND_FLOAT_TO_INT(blue),
         ROUND_FLOAT_TO_INT(alpha));
+      */
       
-      destination->buf[(y * destination->columns) + x] = COL_FULL(
-        ROUND_FLOAT_TO_INT(red),
-        ROUND_FLOAT_TO_INT(green),
-        ROUND_FLOAT_TO_INT(blue),
-        ROUND_FLOAT_TO_INT(alpha)
-      );
+      if (rotate && im->orientation != ORIENTATION_NORMAL) {
+        int ox, oy; // new destination pixel coordinates after rotating
+
+        image_get_rotated_coords(im, x, y, &ox, &oy);
+
+        if (im->orientation >= 5) {
+          // 90 and 270 rotations, width/height are swapped
+          destination->buf[(oy * destination->rows) + ox] = COL_FULL(
+            ROUND_FLOAT_TO_INT(red),
+            ROUND_FLOAT_TO_INT(green),
+            ROUND_FLOAT_TO_INT(blue),
+            ROUND_FLOAT_TO_INT(alpha)
+          );
+        }
+        else {
+          destination->buf[(oy * destination->columns) + ox] = COL_FULL(
+            ROUND_FLOAT_TO_INT(red),
+            ROUND_FLOAT_TO_INT(green),
+            ROUND_FLOAT_TO_INT(blue),
+            ROUND_FLOAT_TO_INT(alpha)
+          );
+        }
+      }
+      else { 
+        destination->buf[(y * destination->columns) + x] = COL_FULL(
+          ROUND_FLOAT_TO_INT(red),
+          ROUND_FLOAT_TO_INT(green),
+          ROUND_FLOAT_TO_INT(blue),
+          ROUND_FLOAT_TO_INT(alpha)
+        );
+      }
     }
   }
 }
 
 static void
 image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *destination,
-  const float y_factor, const FilterInfo *filter_info, ContributionInfo *contribution)
+  const float y_factor, const FilterInfo *filter_info, ContributionInfo *contribution, int rotate)
 {
   float scale, support;
   int y;
@@ -549,13 +578,13 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
     stop    = (int)MIN(center + support + 0.5, source->rows);
     density = 0.0;
     
-    DEBUG_TRACE("y %d: center %.2f, start %d, stop %d\n", y, center, start, stop);
+    //DEBUG_TRACE("y %d: center %.2f, start %d, stop %d\n", y, center, start, stop);
     
     for (n = 0; n < (stop - start); n++) {
       contribution[n].pixel = start + n;
       contribution[n].weight = filter_info->function(scale * (start + n - center + 0.5), filter_info->support);
       density += contribution[n].weight;
-      DEBUG_TRACE("  contribution[%d].pixel %d, weight %.2f, density %.2f\n", n, contribution[n].pixel, contribution[n].weight, density);
+      //DEBUG_TRACE("  contribution[%d].pixel %d, weight %.2f, density %.2f\n", n, contribution[n].pixel, contribution[n].weight, density);
     }
     
     if ((density != 0.0) && (density != 1.0)) {
@@ -565,7 +594,7 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
       density = 1.0 / density;
       for (i = 0; i < n; i++) {
         contribution[i].weight *= density;
-        DEBUG_TRACE("  normalize contribution[%d].weight to %.2f\n", i, contribution[i].weight);
+        //DEBUG_TRACE("  normalize contribution[%d].weight to %.2f\n", i, contribution[i].weight);
       }
     }
     
@@ -591,11 +620,13 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
           // but this produces bad results, so we use only the weight
           //transparency_coeff = weight * ((float)COL_ALPHA(p) / 255);
           
+          /*
           DEBUG_TRACE("    merging with pix (%d, %d) @ %d (%d %d %d %d) weight %.2f\n",
             x, contribution[i].pixel, j,
             COL_RED(p), COL_GREEN(p), COL_BLUE(p), COL_ALPHA(p),
             weight
           );
+          */
           
           red   += weight * COL_RED(p);
           green += weight * COL_GREEN(p);
@@ -630,19 +661,46 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
         alpha = 255.0;
       }
       
+      /*
       DEBUG_TRACE("  -> (%d, %d) @ %d (%d %d %d %d)\n",
         x, y, (y * destination->columns) + x,
         ROUND_FLOAT_TO_INT(red),
         ROUND_FLOAT_TO_INT(green),
         ROUND_FLOAT_TO_INT(blue),
         ROUND_FLOAT_TO_INT(alpha));
+      */
       
-      destination->buf[(y * destination->columns) + x] = COL_FULL(
-        ROUND_FLOAT_TO_INT(red),
-        ROUND_FLOAT_TO_INT(green),
-        ROUND_FLOAT_TO_INT(blue),
-        ROUND_FLOAT_TO_INT(alpha)
-      );
+      if (rotate && im->orientation != ORIENTATION_NORMAL) {
+        int ox, oy; // new destination pixel coordinates after rotating
+
+        image_get_rotated_coords(im, x, y, &ox, &oy);
+
+        if (im->orientation >= 5) {
+          // 90 and 270 rotations, width/height are swapped
+          destination->buf[(oy * destination->rows) + ox] = COL_FULL(
+            ROUND_FLOAT_TO_INT(red),
+            ROUND_FLOAT_TO_INT(green),
+            ROUND_FLOAT_TO_INT(blue),
+            ROUND_FLOAT_TO_INT(alpha)
+          );
+        }
+        else {
+          destination->buf[(oy * destination->columns) + ox] = COL_FULL(
+            ROUND_FLOAT_TO_INT(red),
+            ROUND_FLOAT_TO_INT(green),
+            ROUND_FLOAT_TO_INT(blue),
+            ROUND_FLOAT_TO_INT(alpha)
+          );
+        }
+      }
+      else {
+        destination->buf[(y * destination->columns) + x] = COL_FULL(
+          ROUND_FLOAT_TO_INT(red),
+          ROUND_FLOAT_TO_INT(green),
+          ROUND_FLOAT_TO_INT(blue),
+          ROUND_FLOAT_TO_INT(alpha)
+        );
+      }
     }
   }
 }
@@ -723,7 +781,7 @@ image_downsize_gm(image *im)
     destination.rows    = im->height;
     destination.columns = im->target_width;
     destination.buf     = im->tmpbuf;
-    image_downsize_gm_horizontal_filter(im, &source, &destination, x_factor, &filters[filter], contribution);
+    image_downsize_gm_horizontal_filter(im, &source, &destination, x_factor, &filters[filter], contribution, 0);
     
     // Resize vertically from tmp -> out
     source.rows    = destination.rows;
@@ -732,7 +790,7 @@ image_downsize_gm(image *im)
     
     destination.rows = im->target_height;
     destination.buf  = im->outbuf;
-    image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution);    
+    image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution, 1);    
   }
   else {    
     DEBUG_TRACE("Allocating temporary buffer size %d\n", im->width * im->target_height * sizeof(pix));
@@ -742,7 +800,7 @@ image_downsize_gm(image *im)
     destination.rows    = im->target_height;
     destination.columns = im->width;
     destination.buf     = im->tmpbuf;
-    image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution);
+    image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution, 0);
 
     // Resize horizontally from tmp -> out
     source.rows    = destination.rows;
@@ -751,7 +809,7 @@ image_downsize_gm(image *im)
     
     destination.columns = im->target_width;
     destination.buf     = im->outbuf;
-    image_downsize_gm_horizontal_filter(im, &source, &destination, x_factor, &filters[filter], contribution);
+    image_downsize_gm_horizontal_filter(im, &source, &destination, x_factor, &filters[filter], contribution, 1);
   }
   
   Safefree(im->tmpbuf);

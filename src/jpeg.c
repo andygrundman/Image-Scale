@@ -15,6 +15,8 @@
  */
 
 #define JPEG_BUFFER_SIZE 4096
+#define LE               0     // Exif byte orders
+#define BE               1
 
 struct sv_dst_mgr {
   struct jpeg_destination_mgr jdst;
@@ -81,6 +83,37 @@ image_jpeg_sv_dest(j_compress_ptr cinfo, struct sv_dst_mgr *dst, SV *sv_buf)
   cinfo->dest = (void *)dst;
 }
 
+static void
+image_jpeg_parse_exif_orientation(image *im, Buffer *exif)
+{
+  int bo, offset, num_entries;
+  
+  buffer_consume(exif, 6); // Exif\0\0
+  bo = (buffer_get_short(exif) == 0x4949) ? LE : BE;
+  
+  buffer_consume(exif, 2); // 0x2a00
+  
+  offset = (bo == LE) ? buffer_get_int_le(exif) : buffer_get_int(exif);    
+  buffer_consume(exif, offset - 8); // skip to offset (from the start of the byte order)
+  
+  num_entries = (bo == LE) ? buffer_get_short_le(exif) : buffer_get_short(exif);
+  
+  // All we care about is the orientation
+  while (num_entries--) {
+    int type_id = (bo == LE) ? buffer_get_short_le(exif) : buffer_get_short(exif);
+    
+    if (type_id == 0x112) {
+      buffer_consume(exif, 6);
+      im->orientation = (bo == LE) ? buffer_get_short_le(exif) : buffer_get_short(exif);
+      
+      DEBUG_TRACE("Exif Orientation: %d\n", im->orientation);
+      break;
+    }
+    
+    buffer_consume(exif, 10);
+  }
+}
+
 jmp_buf setjmp_buffer;
 static void
 libjpeg_error_handler(j_common_ptr cinfo)
@@ -125,11 +158,40 @@ image_jpeg_read_header(image *im, const char *file)
     jpeg_mem_src(im->cinfo, (unsigned char *)SvPVX(im->sv_data), sv_len(im->sv_data));
   }
   
+  // Save APP1 marker for EXIF, only need the first 1024 bytes
+  jpeg_save_markers(im->cinfo, 0xE1, 1024);
+  
   jpeg_read_header(im->cinfo, TRUE);
   
   im->width    = im->cinfo->image_width;
   im->height   = im->cinfo->image_height;
   im->channels = im->cinfo->num_components;
+  
+  // Process Exif looking for orientation tag
+  if (im->cinfo->marker_list != NULL) {
+    jpeg_saved_marker_ptr marker = im->cinfo->marker_list;
+
+    while (marker != NULL) {
+      DEBUG_TRACE("Found marker: %x len %d\n", marker->marker, marker->data_length);
+      
+      if (marker->marker == 0xE1 
+        && marker->data[0] == 'E' && marker->data[1] == 'x'
+        && marker->data[2] == 'i' && marker->data[3] == 'f'
+      ) {
+        Buffer exif;
+        
+        buffer_init(&exif, marker->data_length);
+        buffer_append(&exif, marker->data, marker->data_length);
+        
+        image_jpeg_parse_exif_orientation(im, &exif);
+        
+        buffer_free(&exif);
+        break;
+      }
+      
+      marker = marker->next;
+    }
+  }
 }
 
 void
