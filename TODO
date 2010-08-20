@@ -7,6 +7,7 @@ Small memory leak in GIF, probably in libgif
 Update docs
 keep_aspect support for GM
 Support new($file, $offset, $length) for images in audio files, would require Audio::Scan update to report image offset
+jpeg_mem_src not supported in libjpeg v6, need to use a custom source handler instead
 
 Tests:
   width/height all formats

@@ -82,7 +82,7 @@ Image::Scale - Fast, high-quality image resizing
     
     # Resize to 150 width and save to a file
     my $img = Image::Scale->new('image.jpg');
-    $img->resize( { width => 150 } );
+    $img->resize_gd( { width => 150 } );
     $img->save_jpeg('resized.jpg');
 
 =head1 DESCRIPTION
@@ -105,7 +105,7 @@ Previously it could take up to 14 seconds to resize using GD on the ReadyNAS but
 conversion to fixed-point with a little assembly code brings this down to the range of 200ms.
 
 Normal platforms will also see improvement, by removing all of the GD overhead this
-version of copyResampled is around XXX times faster while also using less memory.
+version of copyResampled is around 3 times faster while also using less memory.
 
 =head1 METHODS
 
@@ -145,7 +145,8 @@ image will retain the original aspect ratio.
     filter
 
 For use with resize_gm() only.  Choose from the following filters, sorted in order
-from least to most CPU time.
+from least to most CPU time.  This does not necessarily mean least to best quality, though!
+Be sure to do your own comparisons for quality.
 
     Point
     Box
@@ -163,9 +164,8 @@ from least to most CPU time.
     Bessel
     Sinc
 
-Be sure to do your own comparisons for quality. If no filter is
-specified the default is Lanczos if downsizing, and Mitchell for upsizing or if the image is
-transparent.
+If no filter is specified the default is Lanczos if downsizing, and Mitchell for upsizing or
+if the image has an alpha channel.
 
     keep_aspect => 1
 
@@ -182,9 +182,9 @@ rotated accordingly during resizing.  To disable this feature, set ignore_exif =
     memory_limit => $limit_in_bytes
 
 To avoid excess memory growth when resizing images that may be very
-large, you can specify this option. If the resize() method would result in a
+large, you can specify this option. If the resize_*() method would result in a
 total memory allocation greater than $limit_in_bytes, the method will die.
-Be sure to wrap the resize() call in an eval when using this option.
+Be sure to wrap the resize call in an eval when using this option.
 
 =head2 save_jpeg( $PATH, [ $QUALITY ] )
 
@@ -206,7 +206,37 @@ Returns the resized PNG image as scalar data.
 
 =head1 PERFORMANCE
 
+These numbers were gathered on my 2.4ghz MacBook Pro.
 
+JPEG image, 1425x1425 -> 200x200 (libjpeg v8 with scaling)
+
+    GD copyResampled                        21.9/s
+    resize_gm( { filter => 'Triangle' } )   65.7/s
+    resize_gd_fixed_point                   67.9/s
+    resize_gd                               69.4/s
+    resize_gm_fixed_point                   74.5/s
+
+PNG image, 512x768 -> 200x133 (libpng 1.4.3)
+
+    GD copyResampled                        14.7/s
+    resize_gm( { filter => 'Triangle' } )   26.2/s
+    resize_gm_fixed_point                   27.7/s
+    resize_gd                               29.9/s
+    resize_gd_fixed_point                   31.9/s
+
+Here are some numbers from a machine without floating-point support.
+(Marvell SheevaPlug 1.2ghz ARM9, JPEG 1425x1425 -> 200x200, libjpeg 6 with scaling)
+
+    GD copyResampled                        1.08/s
+    resize_gd                               2.16/s
+    resize_gm( { filter => 'Triangle' } )   2.85/s
+    resize_gd_fixed_point                   7.98/s
+    resize_gm_fixed_point                   9.44/s
+
+And finally, from an even slower machine, the 240mhz Sparc ReadyNAS Duo
+(JPEG 1425x1425 -> 200x200, libjpeg 6 with scaling)
+
+TODO
 
 =head1 SEE ALSO
 
