@@ -78,10 +78,16 @@ image_init(HV *self, image *im)
   im->resize_type    = IMAGE_SCALE_TYPE_GD;
   im->filter         = 0;
   
+#ifdef HAVE_JPEG
   im->cinfo         = NULL;
+#endif
+#ifdef HAVE_PNG
   im->png_ptr       = NULL;
   im->info_ptr      = NULL;
+#endif
+#ifdef HAVE_GIF
   im->gif           = NULL;
+#endif
   
   Newz(0, im->buf, sizeof(Buffer), Buffer);
   buffer_init(im->buf, 1024);
