@@ -8,6 +8,7 @@ Update docs
 keep_aspect support for GM
 Support new($file, $offset, $length) for images in audio files, would require Audio::Scan update to report image offset
 jpeg_mem_src not supported in libjpeg v6, need to use a custom source handler instead
+png_set_expand_gray_1_2_4_to_8 not supported in libpng 1.2
 
 Tests:
   width/height all formats
