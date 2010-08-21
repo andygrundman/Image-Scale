@@ -101,11 +101,15 @@ JPEG and PNG for output.
 This module came about because we needed to improve the very slow performance of
 floating-point resizing algorithms on platforms without a floating-point
 unit, such as ARM devices like the SheevaPlug, and the Sparc-based ReadyNAS Duo.
-Previously it could take up to 14 seconds to resize using GD on the ReadyNAS but the
-conversion to fixed-point with a little assembly code brings this down to the range of 200ms.
+Previously it would take many seconds to resize using GD on the ReadyNAS but the
+conversion to fixed-point with a little assembly code brings this down to the range of
+well under 1 second.
 
 Normal platforms will also see improvement, by removing all of the GD overhead this
 version of copyResampled is around 3 times faster while also using less memory.
+
+The fixed-point versions have an accuracy to around 4 decimal places so the quality
+of floating-point vs. fixed is essentially identical.
 
 =head1 METHODS
 
