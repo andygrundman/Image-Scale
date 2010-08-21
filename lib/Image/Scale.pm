@@ -237,10 +237,10 @@ And finally, from an even slower machine, the 240mhz Netgear ReadyNAS Duo which
 has extremely poor floating-point performance.
 (JPEG 1425x1425 -> 200x200, libjpeg 6 with scaling)
 
-    resize_gd         0.029/s (34.5 s/iter)
-    Triangle          0.033/s (30.4 s/iter)
-    resize_gd_fixed   1.92/s  (0.522 s/iter)
-    gm_fixed          2.07/s  (0.483 s/iter) (63x faster than floating-point!)
+    resize_gd                               0.029/s (34.5 s/iter)
+    resize_gm( { filter => 'Triangle' } )   0.033/s (30.4 s/iter)
+    resize_gd_fixed_point                   1.92/s  (0.522 s/iter)
+    resize_gm_fixed_point                   2.07/s  (0.483 s/iter) (63x faster than floating-point!)
 
 =head1 SEE ALSO
 
