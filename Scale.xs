@@ -1,6 +1,8 @@
 // On Debian, pngconf.h might complain about setjmp.h being loaded before PNG
 // so we have to load png.h first
+#ifdef HAVE_PNG
 #include <png.h>
+#endif
 
 #include "EXTERN.h"
 #include "perl.h"
@@ -108,6 +110,7 @@ CODE:
   image_resize(im);
 }
 
+#ifdef HAVE_JPEG
 void
 save_jpeg(HV *self, SV *path, ...)
 CODE:
@@ -144,6 +147,9 @@ CODE:
 OUTPUT:
   RETVAL
 
+#endif
+
+#ifdef HAVE_PNG
 void
 save_png(HV *self, SV *path)
 CODE:
@@ -169,6 +175,8 @@ CODE:
 }
 OUTPUT:
   RETVAL
+
+#endif
 
 void
 __cleanup(HV *self, image *im)

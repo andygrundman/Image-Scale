@@ -14,8 +14,12 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifdef HAVE_JPEG
 #include <jpeglib.h>
+#endif
+#ifdef HAVE_GIF
 #include <gif_lib.h>
+#endif
 
 #define DEFAULT_JPEG_QUALITY 90
 
@@ -105,12 +109,18 @@ typedef struct {
   int32_t resize_type;
   int32_t filter;
 	
+#ifdef HAVE_JPEG
 	struct jpeg_decompress_struct *cinfo;
-	
+#endif
+
+#ifdef HAVE_PNG
   png_structp png_ptr;
   png_infop info_ptr;
-  
+#endif
+
+#ifdef HAVE_GIF
   GifFileType *gif;
+#endif
 } image;
 
 static inline pix
@@ -140,20 +150,26 @@ void image_alloc(image *im, int width, int height);
 void image_finish(image *im);
 inline void image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy);
 
+#ifdef HAVE_JPEG
 void image_jpeg_read_header(image *im, const char *file);
 void image_jpeg_load(image *im);
 void image_jpeg_save(image *im, const char *path, int quality);
 void image_jpeg_to_sv(image *im, int quality, SV *sv_buf);
 void image_jpeg_finish(image *im);
+#endif
 
 void image_bmp_read_header(image *im, const char *file);
 void image_bmp_load(image *im);
 
+#ifdef HAVE_GIF
 void image_gif_read_header(image *im, const char *file);
 void image_gif_load(image *im);
+#endif
 
+#ifdef HAVE_PNG
 void image_png_read_header(image *im, const char *file);
 void image_png_load(image *im);
 void image_png_save(image *im, const char *path);
 void image_png_to_sv(image *im, SV *sv_buf);
 void image_png_finish(image *im);
+#endif

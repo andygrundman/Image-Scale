@@ -17,11 +17,16 @@
 #include "image.h"
 #include "fixed.h"
 
-// XXX support for compiling-out formats not wanted
-#include "jpeg.c"
 #include "bmp.c"
-#include "gif.c"
+#ifdef HAVE_JPEG
+#include "jpeg.c"
+#endif
+#ifdef HAVE_PNG
 #include "png.c"
+#endif
+#ifdef HAVE_GIF
+#include "gif.c"
+#endif
 
 // GD algorithm
 #include "gd.c"
@@ -102,19 +107,31 @@ image_init(HV *self, image *im)
   switch (bptr[0]) {
     case 0xff:
       if (bptr[1] == 0xd8 && bptr[2] == 0xff) {
+#ifdef HAVE_JPEG
         im->type = JPEG;
+#else
+        croak("Image::Scale was not built with JPEG support\n");
+#endif
       }
       break;
     case 0x89:
       if (bptr[1] == 'P' && bptr[2] == 'N' && bptr[3] == 'G'
         && bptr[4] == 0x0d && bptr[5] == 0x0a && bptr[6] == 0x1a && bptr[7] == 0x0a) {
+#ifdef HAVE_PNG
           im->type = PNG;
+#else
+          croak("Image::Scale was not built with PNG support\n");
+#endif
       }
       break;
     case 'G':
       if (bptr[1] == 'I' && bptr[2] == 'F' && bptr[3] == '8'
         && (bptr[4] == '7' || bptr[4] == '9') && bptr[5] == 'a') {
+#ifdef HAVE_GIF
           im->type = GIF;
+#else
+          croak("Image::Scale was not built with GIF support\n");
+#endif
       }
       break;
     case 'B':
@@ -128,15 +145,21 @@ image_init(HV *self, image *im)
     
   // Read image header via type-specific function to determine dimensions 
   switch (im->type) {
+#ifdef HAVE_JPEG
     case JPEG:
       image_jpeg_read_header(im, file);
       break;
+#endif
+#ifdef HAVE_PNG
     case PNG:
       image_png_read_header(im, file);
       break;
+#endif
+#ifdef HAVE_GIF
     case GIF:
       image_gif_read_header(im, file);
       break;
+#endif
     case BMP:
       image_bmp_read_header(im, file);
       break;
@@ -169,18 +192,24 @@ image_resize(image *im)
   
   // Load the source image into memory
   switch (im->type) {
+#ifdef HAVE_JPEG
     case JPEG:
       image_jpeg_load(im);
       image_jpeg_finish(im);
       break;
+#endif
+#ifdef HAVE_PNG
     case PNG:
       image_png_load(im);
       image_png_finish(im);
       break;
+#endif
+#ifdef HAVE_GIF
     case GIF:
       image_gif_load(im);
       image_gif_finish(im);
       break;
+#endif
     case BMP:
       image_bmp_load(im);
       break;
@@ -265,15 +294,21 @@ image_finish(image *im)
   // Items here may be freed elsewhere so must check that they aren't NULL
   
   switch (im->type) {
+#ifdef HAVE_JPEG
     case JPEG:
       image_jpeg_finish(im);
       break;
+#endif
+#ifdef HAVE_PNG
     case PNG:
       image_png_finish(im);
       break;
+#endif
+#ifdef HAVE_GIF
     case GIF:
       image_gif_finish(im);
       break;
+#endif
     case BMP:
       // Nothing
       break;
