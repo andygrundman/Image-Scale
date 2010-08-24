@@ -9,6 +9,7 @@ keep_aspect support for GM
 Support new($file, $offset, $length) for images in audio files, would require Audio::Scan update to report image offset
 jpeg_mem_src not supported in libjpeg v6, need to use a custom source handler instead
 png_set_expand_gray_1_2_4_to_8 not supported in libpng 1.2
+Improve error handling, return 0 from resize() ?
 
 Tests:
   width/height all formats
@@ -17,6 +18,7 @@ Tests:
   memory_limit
   JPEG with 3 components
   JPEG with 1 component (grayscale)
+  JPEG CMYK?
   JPEG w/ Exif little-endian (digital cameras)
   JPEG w/ Exif normal orientation, 90, 180, 270, are the mirror ones ever used?
   JPEG w/ Exif big-endian (iPhone camera)
@@ -35,4 +37,3 @@ Tests:
   BMP 32-bit (alpha)
   BMP 16, 8, 4, 1-bit
   BMP RLE compressed
-  Big-endian machines
