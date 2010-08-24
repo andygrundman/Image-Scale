@@ -32,6 +32,28 @@ PPCODE:
   ) ) );
 }
 
+int
+width(HV *self)
+CODE:
+{
+  image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
+  
+  RETVAL = im->width;
+}
+OUTPUT:
+  RETVAL
+
+int
+height(HV *self)
+CODE:
+{
+  image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
+  
+  RETVAL = im->height;
+}
+OUTPUT:
+  RETVAL
+
 void
 resize(HV *self, HV *opts)
 CODE:
