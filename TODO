@@ -10,6 +10,8 @@ Support new($file, $offset, $length) for images in audio files, would require Au
 jpeg_mem_src not supported in libjpeg v6, need to use a custom source handler instead
 png_set_expand_gray_1_2_4_to_8 not supported in libpng 1.2
 Improve error handling, return 0 from resize() ?
+Investigate libjpeg-turbo
+Display library versions during Makefile.PL
 
 Tests:
   width/height all formats
@@ -19,6 +21,8 @@ Tests:
   JPEG with 3 components
   JPEG with 1 component (grayscale)
   JPEG CMYK?
+  Progressive JPEG color
+  Progressive JPEG gray
   JPEG w/ Exif little-endian (digital cameras)
   JPEG w/ Exif normal orientation, 90, 180, 270, are the mirror ones ever used?
   JPEG w/ Exif big-endian (iPhone camera)
@@ -37,3 +41,13 @@ Tests:
   BMP 32-bit (alpha)
   BMP 16, 8, 4, 1-bit
   BMP RLE compressed
+
+In buildme.sh static build script, could comment out optional libjpeg features to reduce library size:
+  DCT_IFAST_SUPPORTED
+  DCT_FLOAT_SUPPORTED (benchmark integer vs float DCT)
+  INPUT_SMOOTHING_SUPPORTED
+  C_PROGRESSIVE_SUPPORTED (we won't write progressive JPEG files)
+  C_MULTISCAN_FILES_SUPPORTED (won't write them)
+  BLOCK_SMOOTHING_SUPPORTED
+  QUANT_1PASS_SUPPORTED
+  QUANT_2PASS_SUPPORTED

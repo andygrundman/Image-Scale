@@ -126,8 +126,6 @@ libjpeg_error_handler(j_common_ptr cinfo)
 void
 image_jpeg_read_header(image *im, const char *file)
 {
-  struct jpeg_error_mgr pub;
-  
   if (file != NULL) {
     if ( (im->stdio_fp = fopen(file, "rb")) == NULL ) {
       croak("Image::Scale could not open %s for reading", file);
@@ -139,9 +137,11 @@ image_jpeg_read_header(image *im, const char *file)
   
   Newz(0, im->cinfo, sizeof(struct jpeg_decompress_struct), struct jpeg_decompress_struct);
   im->memory_used += sizeof(struct jpeg_decompress_struct);
+  
+  Newz(0, im->jpeg_error_pub, sizeof(struct jpeg_error_mgr), struct jpeg_error_mgr);
 
-  im->cinfo->err = jpeg_std_error(&pub);
-  pub.error_exit = libjpeg_error_handler;
+  im->cinfo->err = jpeg_std_error(im->jpeg_error_pub);
+  im->jpeg_error_pub->error_exit = libjpeg_error_handler;
   
   if (setjmp(setjmp_buffer)) {
     return;
@@ -155,7 +155,8 @@ image_jpeg_read_header(image *im, const char *file)
   }
   else {
     // Reading from SV
-    jpeg_mem_src(im->cinfo, (unsigned char *)SvPVX(im->sv_data), sv_len(im->sv_data));
+    // XXX jpeg_mem_src only available in libjpeg-8
+    //jpeg_mem_src(im->cinfo, (unsigned char *)SvPVX(im->sv_data), sv_len(im->sv_data));
   }
   
   // Save APP1 marker for EXIF, only need the first 1024 bytes
@@ -198,8 +199,8 @@ void
 image_jpeg_load(image *im)
 {
   float scale_factor;
-  int x, y, i, w, h, ofs, maxbuf;
-  unsigned char *line[16], *ptr;
+  int x, w, h, ofs;
+  unsigned char *line[1], *ptr;
   
   im->cinfo->do_fancy_upsampling = FALSE;
   im->cinfo->do_block_smoothing = FALSE;
@@ -228,56 +229,32 @@ image_jpeg_load(image *im)
   
   jpeg_start_decompress(im->cinfo);
   
-  if (im->cinfo->rec_outbuf_height > 16) {
-    warn("Image::Scale JPEG uses line buffers > 16, cannot load\n");
-    return;
-  }
-  
   // Allocate storage for decompressed image
   image_alloc(im, w, h);
   
-  maxbuf = w * h;
+  ofs = 0;
   
-  if (im->cinfo->output_components == 3) {
-    ofs = 0;
-    
-    New(0, ptr, w * 3 * im->cinfo->rec_outbuf_height, unsigned char);
-
-    for (y = 0; y < h; y += im->cinfo->rec_outbuf_height) {
-      for (i = 0; i < im->cinfo->rec_outbuf_height; i++) {
-        line[i] = ptr + (w * 3 * i);
+  New(0, ptr, w * im->cinfo->output_components, unsigned char);
+  line[0] = ptr;
+  
+  if (im->cinfo->output_components == 3) { // RGB
+    while (im->cinfo->output_scanline < im->cinfo->output_height) {
+      jpeg_read_scanlines(im->cinfo, line, 1);      
+      for (x = 0; x < w; x++) {
+        im->pixbuf[ofs++] = COL(ptr[x + x + x], ptr[x + x + x + 1], ptr[x + x + x + 2]);
       }
-      jpeg_read_scanlines(im->cinfo, line, im->cinfo->rec_outbuf_height);
-      for (x = 0; x < w * im->cinfo->rec_outbuf_height; x++)  {
-        if (ofs < maxbuf) {
-          im->pixbuf[ofs] = COL(ptr[x + x + x], ptr[x + x + x + 1], ptr[x + x + x + 2]);
-          ofs++;
-        }
-      }
-    }
-    
-    Safefree(ptr);
-  }
-  else if (im->cinfo->output_components == 1) {
-    ofs = 0;
-    
-    for (i = 0; i < im->cinfo->rec_outbuf_height; i++) {
-      New(0, line[i], w, unsigned char);
-    }
-    
-    for (y = 0; y < h; y += im->cinfo->rec_outbuf_height) {
-      jpeg_read_scanlines(im->cinfo, line, im->cinfo->rec_outbuf_height);
-      for (i = 0; i < im->cinfo->rec_outbuf_height; i++)  {
-        for (x = 0; x < w; x++) {
-          im->pixbuf[ofs++] = COL(line[i][x], line[i][x], line[i][x]);
-        }
-      }
-    }
-    
-    for (i = 0; i < im->cinfo->rec_outbuf_height; i++) {
-      Safefree(line[i]);
     }
   }
+  else { // grayscale
+    while (im->cinfo->output_scanline < im->cinfo->output_height) {
+      jpeg_read_scanlines(im->cinfo, line, 1);      
+      for (x = 0; x < w; x++) {
+        im->pixbuf[ofs++] = COL(ptr[x], ptr[x], ptr[x]);
+      }
+    }
+  }
+  
+  Safefree(ptr);
 }
 
 static void
@@ -290,8 +267,8 @@ image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
   
   cinfo->image_width      = im->target_width;
   cinfo->image_height     = im->target_height;
-  cinfo->input_components = 3; // XXX grayscale?
-  cinfo->in_color_space   = JCS_RGB; // XXX grayscale?
+  cinfo->input_components = 3;
+  cinfo->in_color_space   = JCS_RGB; // output is always RGB even if source was grayscale
   
   jpeg_set_defaults(cinfo);
   jpeg_set_quality(cinfo, quality, TRUE);
@@ -359,6 +336,9 @@ image_jpeg_finish(image *im)
     Safefree(im->cinfo);
     im->cinfo = NULL;
     im->memory_used -= sizeof(struct jpeg_decompress_struct);
+    
+    Safefree(im->jpeg_error_pub);
+    im->jpeg_error_pub = NULL;
   }
   
   if (im->stdio_fp != NULL) {

@@ -111,6 +111,7 @@ typedef struct {
 	
 #ifdef HAVE_JPEG
 	struct jpeg_decompress_struct *cinfo;
+  struct jpeg_error_mgr *jpeg_error_pub;
 #endif
 
 #ifdef HAVE_PNG
