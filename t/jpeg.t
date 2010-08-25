@@ -2,20 +2,24 @@ use strict;
 
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 8;
+use Test::More tests => 2 * 5;
 
 use Image::Scale;
 
-# XXX reusable functions for each format type
+my @types = qw(
+    rgb
+    rgb_progressive
+    gray
+    gray_progressive
+    cmyk
+);    
 
-# 3-channel RGB
-{
-    my $im = Image::Scale->new( _f('rgb_313x234.jpg') );
+for my $type ( @types ) {
+    my $im = Image::Scale->new( _f("$type.jpg") );
     
-    is( $im->width, 313, 'JPEG RGB width ok' );
-    is( $im->height, 234, 'JPEG RGB height ok' );
+    is( $im->width, 313, "JPEG $type width ok" );
+    is( $im->height, 234, "JPEG $type height ok" );
 }
-
 
 sub _f {    
     return catfile( $FindBin::Bin, 'images', shift );

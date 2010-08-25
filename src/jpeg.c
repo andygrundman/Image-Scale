@@ -239,15 +239,29 @@ image_jpeg_load(image *im)
   
   if (im->cinfo->output_components == 3) { // RGB
     while (im->cinfo->output_scanline < im->cinfo->output_height) {
-      jpeg_read_scanlines(im->cinfo, line, 1);      
+      jpeg_read_scanlines(im->cinfo, line, 1);
       for (x = 0; x < w; x++) {
         im->pixbuf[ofs++] = COL(ptr[x + x + x], ptr[x + x + x + 1], ptr[x + x + x + 2]);
       }
     }
   }
+  else if (im->cinfo->output_components == 4) { // CMYK inverted (Photoshop)
+    while (im->cinfo->output_scanline < im->cinfo->output_height) {
+      JSAMPROW row = *line;
+      jpeg_read_scanlines(im->cinfo, line, 1);
+      for (x = 0; x < w; x++) {
+        int c = *row++;
+        int m = *row++;
+        int y = *row++;
+        int k = *row++;
+        
+        im->pixbuf[ofs++] = COL((c * k) / MAXJSAMPLE, (m * k) / MAXJSAMPLE, (y * k) / MAXJSAMPLE);
+      }
+    }
+  }
   else { // grayscale
     while (im->cinfo->output_scanline < im->cinfo->output_height) {
-      jpeg_read_scanlines(im->cinfo, line, 1);      
+      jpeg_read_scanlines(im->cinfo, line, 1);
       for (x = 0; x < w; x++) {
         im->pixbuf[ofs++] = COL(ptr[x], ptr[x], ptr[x]);
       }
