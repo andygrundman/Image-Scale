@@ -85,8 +85,8 @@ typedef struct {
   SV      *sv_data;
   int32_t sv_offset;
   int32_t type;
-	int32_t width;
-	int32_t height;
+  int32_t width;
+  int32_t height;
   int32_t width_padding;  // empty padding pixels to leave to maintain aspect
   int32_t width_inner;    // width of inner area when maintaining aspect
   int32_t height_padding;
@@ -97,20 +97,20 @@ typedef struct {
   int32_t has_alpha;
   int32_t orientation;
   int32_t memory_used;
-	pix     *pixbuf; // Source image
+  pix     *pixbuf; // Source image
   pix     *outbuf; // Resized image
   pix     *tmpbuf; // Temporary intermediate image
-	
-	// Resize options
+  
+  // Resize options
   int32_t memory_limit;
   int32_t target_width;
   int32_t target_height;
   int32_t keep_aspect;
   int32_t resize_type;
   int32_t filter;
-	
+  
 #ifdef HAVE_JPEG
-	struct jpeg_decompress_struct *cinfo;
+  struct jpeg_decompress_struct *cinfo;
   struct jpeg_error_mgr *jpeg_error_pub;
 #endif
 
