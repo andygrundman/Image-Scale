@@ -43,12 +43,15 @@ image_init(HV *self, image *im)
   
   if (my_hv_exists(self, "file")) {
     // Input from file
-    file = SvPVX(*(my_hv_fetch(self, "file")));
+    SV *path = *(my_hv_fetch(self, "file"));
+    file = SvPVX(path);
     im->fh = IoIFP(sv_2io(*(my_hv_fetch(self, "_fh"))));
+    im->path = newSVsv(path);
   }
   else {
     // Input from scalar ref
     im->fh = NULL;
+    im->path = newSVpv("(data)", 0);
     im->sv_data = *(my_hv_fetch(self, "data"));
     if (SvROK(im->sv_data))
       im->sv_data = SvRV(im->sv_data);
@@ -351,19 +354,19 @@ image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy)
       *ox = x;
       *oy = im->target_height - 1 - y;
       break;
-    case ORIENTATION_MIRROR_HORIZ_270_CW: // 5
+    case ORIENTATION_MIRROR_HORIZ_270_CCW: // 5
       *ox = y;
       *oy = x;
       break;
-    case ORIENTATION_90_CW: // 6
+    case ORIENTATION_90_CCW: // 6
       *ox = im->target_height - 1 - y;
       *oy = x;
       break;
-    case ORIENTATION_MIRROR_HORIZ_90_CW: // 7
+    case ORIENTATION_MIRROR_HORIZ_90_CCW: // 7
       *ox = im->target_height - 1 - y;
       *oy = im->target_width - 1 - x;
       break;
-    case ORIENTATION_270_CW: // 8
+    case ORIENTATION_270_CCW: // 8
       *ox = y;
       *oy = im->target_width - 1 - x;
       break;

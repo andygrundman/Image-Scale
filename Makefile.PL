@@ -185,7 +185,7 @@ my $src_files = join(' ', glob 'src/*.c');
 WriteMakefile(
     NAME              => 'Image::Scale',
     VERSION_FROM      => 'lib/Image/Scale.pm',
-    PREREQ_PM         => {},
+    PREREQ_PM         => { 'Test::NoWarnings' => 0 },
     ABSTRACT_FROM     => 'lib/Image/Scale.pm',
     AUTHOR            => 'Andy Grundman <andy@hybridized.org>',
     INC               => join(' ', @INC),

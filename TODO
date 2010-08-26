@@ -20,7 +20,7 @@ Tests:
   memory_limit
   JPEG with 3 components
   JPEG with 1 component (grayscale)
-  JPEG CMYK?
+  JPEG CMYK
   Progressive JPEG color
   Progressive JPEG gray
   JPEG w/ Exif little-endian (digital cameras)

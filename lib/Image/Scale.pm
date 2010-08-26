@@ -28,6 +28,10 @@ sub new {
         };
     }
     else {
+        if ( !-e $file ) {
+            die "Image::Scale couldn't find $file\n";
+        }
+        
         open my $fh, '<', $file || die "Image::Scale couldn't open $file: $!\n";
         binmode $fh;
     
@@ -134,7 +138,7 @@ Returns the height of the original source image.
 The 4 resize methods available are:
 
     resize_gd - This is GD's copyResampled algorithm (floating-point)
-    resize_gd_fixed_point - copyResampled (fixed-point)
+    resize_gd_fixed_point - copyResampled (converted to fixed-point)
     resize_gm - GraphicsMagick, see below for filter options
     resize_gm_fixed_point - GraphicsMagick, only the Triangle filter is available in fixed-point mode
 
@@ -229,7 +233,7 @@ PNG image, 512x768 -> 200x133 (libpng 1.4.3)
     resize_gd_fixed_point                   31.9/s
 
 Here are some numbers from a machine without floating-point support.
-(Marvell SheevaPlug 1.2ghz ARM9, JPEG 1425x1425 -> 200x200, libjpeg 6 with scaling)
+(Marvell SheevaPlug 1.2ghz ARM9, JPEG 1425x1425 -> 200x200, libjpeg 6b with scaling)
 
     GD copyResampled                        1.08/s
     resize_gd                               2.16/s
@@ -239,7 +243,7 @@ Here are some numbers from a machine without floating-point support.
 
 And finally, from an even slower machine, the 240mhz Netgear ReadyNAS Duo which
 has extremely poor floating-point performance.
-(JPEG 1425x1425 -> 200x200, libjpeg 6 with scaling)
+(JPEG 1425x1425 -> 200x200, libjpeg 6b with scaling)
 
     resize_gd                               0.029/s (34.5 s/iter)
     resize_gm( { filter => 'Triangle' } )   0.033/s (30.4 s/iter)

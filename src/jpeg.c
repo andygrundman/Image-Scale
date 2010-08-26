@@ -18,6 +18,11 @@
 #define LE               0     // Exif byte orders
 #define BE               1
 
+// Unfortunately we need a global variable in order to display the filename
+// during libjpeg output messages
+#define FILENAME_LEN 255
+char filename[FILENAME_LEN + 1];
+
 struct sv_dst_mgr {
   struct jpeg_destination_mgr jdst;
   SV *sv_buf;
@@ -123,6 +128,17 @@ libjpeg_error_handler(j_common_ptr cinfo)
   return;
 }
 
+static void
+libjpeg_output_message(j_common_ptr cinfo)
+{
+  char buffer[JMSG_LENGTH_MAX];
+
+  /* Create the message */
+  (*cinfo->err->format_message) (cinfo, buffer);
+  
+  warn("Image::Scale error: %s (%s)\n", buffer, filename);
+}
+
 void
 image_jpeg_read_header(image *im, const char *file)
 {
@@ -142,10 +158,16 @@ image_jpeg_read_header(image *im, const char *file)
 
   im->cinfo->err = jpeg_std_error(im->jpeg_error_pub);
   im->jpeg_error_pub->error_exit = libjpeg_error_handler;
+  im->jpeg_error_pub->output_message = libjpeg_output_message;
   
   if (setjmp(setjmp_buffer)) {
     return;
   }
+  
+  // Save filename in case any warnings/errors occur
+  strncpy(filename, SvPVX(im->path), FILENAME_LEN);
+  if (sv_len(im->path) > FILENAME_LEN)
+    filename[FILENAME_LEN] = 0;
   
   jpeg_create_decompress(im->cinfo);
   
@@ -226,6 +248,11 @@ image_jpeg_load(image *im)
   if (setjmp(setjmp_buffer)) {
     return;
   }
+  
+  // Save filename in case any warnings/errors occur
+  strncpy(filename, SvPVX(im->path), FILENAME_LEN);
+  if (sv_len(im->path) > FILENAME_LEN)
+    filename[FILENAME_LEN] = 0;
   
   jpeg_start_decompress(im->cinfo);
   
