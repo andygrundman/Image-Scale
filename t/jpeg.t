@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 202;
+use Test::More tests => 190;
 require Test::NoWarnings;
 
 use Image::Scale;
