@@ -405,6 +405,13 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
 {
   float scale, support;
   int x;
+  int dstX = 0;
+  int dstW = destination->columns;
+  
+  if (im->width_padding) {
+    dstX = im->width_padding;
+    dstW = im->width_inner;
+  }
   
   scale = BLUR * MAX(1.0 / x_factor, 1.0);
   support = scale * filter_info->support;
@@ -415,11 +422,11 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
   }
   scale = 1.0 / scale;
   
-  for (x = 0; x < destination->columns; x++) {
+  for (x = dstX; (x < dstX + dstW); x++) {
     float center, density;
     int n, start, stop, y;
     
-    center  = (float)(x + 0.5) / x_factor;
+    center  = (float)(x - dstX + 0.5) / x_factor;
     start   = (int)MAX(center - support + 0.5, 0);
     stop    = (int)MIN(center + support + 0.5, source->columns);
     density = 0.0;
@@ -556,6 +563,13 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
 {
   float scale, support;
   int y;
+  int dstY = 0;
+  int dstH = destination->rows;
+  
+  if (im->height_padding) {
+    dstY = im->height_padding;
+    dstH = im->height_inner;
+  }
   
   //DEBUG_TRACE("y_factor %.2f\n", y_factor);
   
@@ -569,11 +583,11 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
   }
   scale = 1.0 / scale;
   
-  for (y = 0; y < destination->rows; y++) {
+  for (y = dstY; (y < dstY + dstH); y++) {
     float center, density;
     int n, start, stop, x;
     
-    center  = (float)(y + 0.5) / y_factor;
+    center  = (float)(y - dstY + 0.5) / y_factor;
     start   = (int)MAX(center - support + 0.5, 0);
     stop    = (int)MIN(center + support + 0.5, source->rows);
     density = 0.0;
@@ -755,8 +769,15 @@ image_downsize_gm(image *im)
   order = (((float)columns * (im->height + rows)) >
          ((float)rows * (im->width + columns)));
   
-  x_factor = (float)im->target_width / im->width;
-  y_factor = (float)im->target_height / im->height;
+  if (im->width_padding)
+    x_factor = (float)im->width_inner / im->width;
+  else
+    x_factor = (float)im->target_width / im->width;
+  
+  if (im->height_padding)
+    y_factor = (float)im->height_inner / im->height;
+  else
+    y_factor = (float)im->target_height / im->height;
   
   x_support = BLUR * MAX(1.0 / x_factor, 1.0) * filters[filter].support;
   y_support = BLUR * MAX(1.0 / y_factor, 1.0) * filters[filter].support;

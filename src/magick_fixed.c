@@ -29,6 +29,13 @@ image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, Im
 {
   fixed_t scale, support;
   int x;
+  int dstX = 0;
+  int dstW = destination->columns;
+  
+  if (im->width_padding) {
+    dstX = im->width_padding;
+    dstW = im->width_inner;
+  }
   
   scale = MAX(fixed_div(FIXED_1, x_factor), FIXED_1);
   support = fixed_mul(scale, filter_info->support);
@@ -39,11 +46,11 @@ image_downsize_gm_horizontal_filter_fixed_point(image *im, ImageInfo *source, Im
   }
   scale = fixed_div(FIXED_1, scale);
   
-  for (x = 0; x < destination->columns; x++) {
+  for (x = dstX; (x < dstX + dstW); x++) {
     fixed_t center, density;
     int n, start, stop, y;
     
-    center  = fixed_div(int_to_fixed(x) + FIXED_HALF, x_factor);
+    center  = fixed_div(int_to_fixed(x - dstX) + FIXED_HALF, x_factor);
     start   = fixed_to_int(MAX(center - support + FIXED_HALF, 0));
     stop    = fixed_to_int(MIN(center + support + FIXED_HALF, int_to_fixed(source->columns)));
     density = 0;
@@ -179,6 +186,13 @@ image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, Imag
 {
   fixed_t scale, support;
   int y;
+  int dstY = 0;
+  int dstH = destination->rows;
+  
+  if (im->height_padding) {
+    dstY = im->height_padding;
+    dstH = im->height_inner;
+  }
   
   //DEBUG_TRACE("y_factor %.2f\n", y_factor);
   
@@ -192,11 +206,11 @@ image_downsize_gm_vertical_filter_fixed_point(image *im, ImageInfo *source, Imag
   }
   scale = fixed_div(FIXED_1, scale);
   
-  for (y = 0; y < destination->rows; y++) {
+  for (y = dstY; (y < dstY + dstH); y++) {
     fixed_t center, density;
     int n, start, stop, x;
     
-    center  = fixed_div(int_to_fixed(y) + FIXED_HALF, y_factor);
+    center  = fixed_div(int_to_fixed(y - dstY) + FIXED_HALF, y_factor);
     start   = fixed_to_int(MAX(center - support + FIXED_HALF, 0));
     stop    = fixed_to_int(MIN(center + support + FIXED_HALF, int_to_fixed(source->rows)));
     density = 0;
@@ -358,8 +372,15 @@ image_downsize_gm_fixed_point(image *im)
   order = (((float)columns * (im->height + rows)) >
          ((float)rows * (im->width + columns)));
   
-  x_factor = (float)im->target_width / im->width;
-  y_factor = (float)im->target_height / im->height;
+   if (im->width_padding)
+     x_factor = (float)im->width_inner / im->width;
+   else
+     x_factor = (float)im->target_width / im->width;
+
+   if (im->height_padding)
+     y_factor = (float)im->height_inner / im->height;
+   else
+     y_factor = (float)im->target_height / im->height;
   
   x_support = BLUR * MAX(1.0 / x_factor, 1.0) * fixed_to_int(filters[filter].support);
   y_support = BLUR * MAX(1.0 / y_factor, 1.0) * fixed_to_int(filters[filter].support);

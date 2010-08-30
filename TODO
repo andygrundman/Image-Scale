@@ -3,9 +3,7 @@ Support < 24-bit BMP files, RLE compression
 Multiple calls to resize() on PNG at least doesn't work
 Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
-Update docs
-keep_aspect support for GM
-Support new($file, $offset, $length) for images in audio files, would require Audio::Scan update to report image offset
+Support new($file, $offset, $length) for images in audio files with latest Audio::Scan
 jpeg_mem_src not supported in libjpeg v6, need to use a custom source handler instead
 png_set_expand_gray_1_2_4_to_8 not supported in libpng 1.2
 Improve error handling, return 0 from resize() ?
