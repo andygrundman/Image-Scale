@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => (2 * 5) + ((5 * 4) * 2) + ((5 * 4) * 2) + ((5 * 4) * 2) + 3;
+use Test::More tests => 1;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -105,9 +105,20 @@ for my $resize ( @resizes ) {
     is( _compare( _load($outfile), "truncated_50.jpg" ), 1, 'JPEG corrupt truncated resize_gd ok' );
 }
 
-# XXX keep_aspect bgcolor
+# keep_aspect bgcolor
+{
+    my $outfile = _tmp("bgcolor.jpg");
+    
+    my $im = Image::Scale->new( _f("rgb.jpg") );
+    $im->resize_gd( { width => 50, height => 50, keep_aspect => 1, bgcolor => 0x123456 } );
+    $im->save_jpeg($outfile);
+    
+    is( _compare( _load($outfile), "bgcolor.jpg" ), 1, 'JPEG bgcolor ok' );
+}
 
 # Exif rotation
+# Exif with both width/height specified
+# Exif with keep_aspect
 {
     my @rotations = qw(
         mirror_horiz
@@ -122,15 +133,41 @@ for my $resize ( @resizes ) {
     for my $r ( @rotations ) {
         my $outfile = _tmp("exif_${r}_50.jpg");
         my $im = Image::Scale->new( _f("exif_${r}.jpg") );
-        $im->resize( { width => 50 } );
+        $im->resize_gd( { width => 50 } );
         $im->save_jpeg($outfile);
         
-        # XXX broken if rotated...
+        is( _compare( _load($outfile), "exif_${r}_50.jpg" ), 1, "JPEG EXIF auto-rotation $r width 50 ok" );
+    }
+    
+    for my $r ( @rotations ) {
+        my $outfile = _tmp("exif_${r}_50x50.jpg");
+        my $im = Image::Scale->new( _f("exif_${r}.jpg") );
+        $im->resize_gd( { width => 50, height => 50 } );
+        $im->save_jpeg($outfile);
+        
+        is( _compare( _load($outfile), "exif_${r}_50x50.jpg" ), 1, "JPEG EXIF auto-rotation $r 50x50 ok" );
+    }
+    
+    # XXX some of these have a strange 1-pixel shift, but not that important
+    for my $r ( @rotations ) {
+        my $outfile = _tmp("exif_${r}_50x50_keep_aspect.jpg");
+        my $im = Image::Scale->new( _f("exif_${r}.jpg") );
+        $im->resize_gd( { width => 50, height => 50, keep_aspect => 1 } );
+        $im->save_jpeg($outfile);
+        
+        is( _compare( _load($outfile), "exif_${r}_50x50_keep_aspect.jpg" ), 1, "JPEG EXIF auto-rotation $r 50x50 keep_aspect ok" );
     }
 }
         
-# XXX Exif with ignore_exif
-# XXX Exif with keep_aspect, make sure padding is calculated correctly for orientation >= 5
+# Exif with ignore_exif
+{
+    my $outfile = _tmp("exif_ignore_50.jpg");
+    my $im = Image::Scale->new( _f("exif_90_ccw.jpg") );
+    $im->resize_gd( { width => 50, ignore_exif => 1 } );
+    $im->save_jpeg($outfile);
+    
+    is( _compare( _load($outfile), "exif_ignore_50.jpg" ), 1, "JPEG EXIF ignore_exif ok" );
+}
 
 END {
     #File::Path::rmtree($tmpdir);

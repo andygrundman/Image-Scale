@@ -70,17 +70,6 @@ CODE:
     croak("Image::Scale->resize requires at least one of height or width");
   }
   
-  if (!im->target_height) {
-    // Only width was specified
-    im->target_height = (int)((float)im->height / im->width * im->target_width);
-  }
-  else if (!im->target_width) {
-    // Only height was specified
-    im->target_width = (int)((float)im->width / im->height * im->target_height);
-  }
-  
-  DEBUG_TRACE("Resizing from %d x %d -> %d x %d\n", im->width, im->height, im->target_width, im->target_height);
-  
   if (my_hv_exists(opts, "keep_aspect"))
     im->keep_aspect = SvIV(*(my_hv_fetch(opts, "keep_aspect")));
   
@@ -88,6 +77,9 @@ CODE:
     if (SvIV(*(my_hv_fetch(opts, "ignore_exif"))) != 0)
       im->orientation = ORIENTATION_NORMAL;
   }
+  
+  if (my_hv_exists(opts, "bgcolor"))
+    im->bgcolor = SvIV(*(my_hv_fetch(opts, "bgcolor"))) << 8 | 0xFF;
   
   if (my_hv_exists(opts, "memory_limit"))
     im->memory_limit = SvIV(*(my_hv_fetch(opts, "memory_limit")));
@@ -128,6 +120,31 @@ CODE:
     else if (strEQ("Sinc", filterstr))
       im->filter = SincFilter;
   }
+  
+  // If the image will be rotated 90 degrees, swap the target values
+  if (im->orientation >= 5) {
+    if (!im->target_height) {
+      // Only width was specified, but this will actually be the target height
+      im->target_height = im->target_width;
+      im->target_width = 0;
+    }
+    else if (!im->target_width) {
+      // Only height was specified, but this will actually be the target width
+      im->target_width = im->target_height;
+      im->target_height = 0;
+    }
+  }      
+  
+  if (!im->target_height) {
+    // Only width was specified
+    im->target_height = (int)((float)im->height / im->width * im->target_width);
+  }
+  else if (!im->target_width) {
+    // Only height was specified
+    im->target_width = (int)((float)im->width / im->height * im->target_height);
+  }
+  
+  DEBUG_TRACE("Resizing from %d x %d -> %d x %d\n", im->width, im->height, im->target_width, im->target_height);
   
   image_resize(im);
 }

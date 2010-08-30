@@ -80,6 +80,7 @@ image_init(HV *self, image *im)
   im->keep_aspect    = 0;
   im->resize_type    = IMAGE_SCALE_TYPE_GD;
   im->filter         = 0;
+  im->bgcolor        = 0;
   
 #ifdef HAVE_JPEG
   im->cinfo         = NULL;
@@ -246,6 +247,7 @@ image_resize(image *im)
   if (im->keep_aspect) {
     float source_ar = 1.0 * im->width / im->height;
     float dest_ar   = 1.0 * im->target_width / im->target_height;
+    int i;
     
     if (source_ar >= dest_ar) {
       im->height_padding = (int)((im->target_height - (im->target_width / source_ar)) / 2);
@@ -256,12 +258,17 @@ image_resize(image *im)
       im->width_inner   = (int)(im->target_height * source_ar);
     }
     
-    // Fill new space with transparent pixels (all zeros)
-    // XXX bgcolor support if writing JPEG
-    Zero(im->outbuf, size, pix);
+    // Fill new space with the bgcolor
+    if (im->bgcolor) {
+      for (i = 0; i < size; i += sizeof(pix))
+        memcpy( ((char *)im->outbuf) + i, &im->bgcolor, sizeof(pix) );
+    }
+    else {
+      Zero(im->outbuf, size, pix);
+    }
     
-    DEBUG_TRACE("Using width padding %d, inner width %d, height padding %d, inner height %d\n",
-      im->width_padding, im->width_inner, im->height_padding, im->height_inner);
+    DEBUG_TRACE("Using width padding %d, inner width %d, height padding %d, inner height %d, bgcolor %x\n",
+      im->width_padding, im->width_inner, im->height_padding, im->height_inner, im->bgcolor);
   }
 
   // Resize

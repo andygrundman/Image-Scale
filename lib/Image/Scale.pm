@@ -182,6 +182,13 @@ original aspect ratio of the source as well as center the image when resizing in
 a different aspect ratio. For best results, images altered in this way should be
 saved as PNG which will automatically add the necessary transparency around the image.
 
+    bgcolor => 0xffffff
+
+When using keep_aspect, you can use bgcolor to define the background color of the padded
+portion of the image.  Usually this should only be used if saving as JPEG because PNG
+will default to transparent.  If this value is set and the image is saved as PNG, the
+PNG will not be transparent.  The default bgcolor value is 0x000000 (black).
+
     ignore_exif => 1
 
 By default, if a JPEG image contains an EXIF tag with orientation info, the image will be

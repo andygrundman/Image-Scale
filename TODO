@@ -1,4 +1,3 @@
-bg_color option for resize() if useful?
 Series-based resizing would be faster if implemented directly
 Support < 24-bit BMP files, RLE compression
 Multiple calls to resize() on PNG at least doesn't work
@@ -34,6 +33,7 @@ Tests:
   PNG interlaced
   PNG with tRNS
   PNG 16-bit
+  PNG with bgcolor set (non-transparent)
   GIF non-interlaced
   GIF transparent
   GIF interlaced

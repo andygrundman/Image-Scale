@@ -109,6 +109,7 @@ typedef struct {
   int32_t keep_aspect;
   int32_t resize_type;
   int32_t filter;
+  int32_t bgcolor;
   
 #ifdef HAVE_JPEG
   struct jpeg_decompress_struct *cinfo;
