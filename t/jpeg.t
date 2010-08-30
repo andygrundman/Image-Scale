@@ -207,12 +207,10 @@ for my $resize ( @resizes ) {
 
 # resize multiple from JPEG scalar
 {
-    open my $fh, '<', _f("rgb.jpg");
-    my $data = do { $/ = undef; <$fh> };
-    close $fh;
+    my $dataref = _load( _f("rgb.jpg") );
     
     my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
-    my $im = Image::Scale->new(\$data);
+    my $im = Image::Scale->new($dataref);
     $im->resize_gd_fixed_point( { width => 150 } );
     $im->resize_gd_fixed_point( { width => 100 } );
     $im->save_jpeg($outfile);
@@ -221,7 +219,7 @@ for my $resize ( @resizes ) {
 }
 
 END {
-    #File::Path::rmtree($tmpdir);
+    File::Path::rmtree($tmpdir);
 }
 
 sub _f {    
