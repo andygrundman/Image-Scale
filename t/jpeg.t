@@ -69,18 +69,25 @@ for my $resize ( @resizes ) {
 
 # keep_aspect with height padding
 for my $resize ( @resizes ) {
-    for my $type ( @types ) {
-        my $outfile = _tmp("${type}_${resize}_50x50_keep_aspect.jpg");
-        
-        my $im = Image::Scale->new( _f("${type}.jpg") );
-        $im->$resize( { width => 50, height => 50, keep_aspect => 1 } );
-        $im->save_jpeg($outfile);
-        
-        is( _compare( _load($outfile), "${type}_${resize}_50x50_keep_aspect.jpg" ), 1, "JPEG $type $resize 50x50 keep_aspect file ok" );
-    }
+    my $outfile = _tmp("${resize}_50x50_keep_aspect_height.jpg");
+    
+    my $im = Image::Scale->new( _f("rgb.jpg") );
+    $im->$resize( { width => 50, height => 50, keep_aspect => 1 } );
+    $im->save_jpeg($outfile);
+    
+    is( _compare( _load($outfile), "${resize}_50x50_keep_aspect_height.jpg" ), 1, "JPEG $resize 50x50 keep_aspect file ok" );
 }
 
-# XXX keep_aspect with width padding (use exif image with ignore_exif)
+# keep_aspect with width padding
+for my $resize ( @resizes ) {
+    my $outfile = _tmp("${resize}_50x50_keep_aspect_width.jpg");
+    
+    my $im = Image::Scale->new( _f("exif_90_ccw.jpg") );
+    $im->$resize( { width => 50, height => 50, ignore_exif => 1, keep_aspect => 1 } );
+    $im->save_jpeg($outfile);
+    
+    is( _compare( _load($outfile), "${resize}_50x50_keep_aspect_width.jpg" ), 1, "JPEG $resize 50x50 keep_aspect file ok" );
+}
 
 # memory_limit
 {
@@ -200,7 +207,7 @@ sub _load {
 sub _compare {
     my ( $test, $path ) = @_;
     
-    my $ref = _load( catfile( $FindBin::Bin, 'ref', $path ) );
+    my $ref = _load( catfile( $FindBin::Bin, 'ref', 'jpg', $path ) );
     
     return $$ref eq $$test;
 }
