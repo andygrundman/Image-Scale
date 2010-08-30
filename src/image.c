@@ -198,7 +198,7 @@ image_alloc(image *im, int width, int height)
 void
 image_resize(image *im)
 {
-  int size;
+  int size, alloc_size;
   
   // Load the source image into memory
   switch (im->type) {
@@ -232,16 +232,17 @@ image_resize(image *im)
   }
   
   // Allocate space for the resized image
-  size = im->target_width * im->target_height * sizeof(pix);
+  size = im->target_width * im->target_height;
+  alloc_size = size * sizeof(pix);
   
-  if (im->memory_limit && im->memory_limit < im->memory_used + size) {
-    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)", im->memory_used + size);
+  if (im->memory_limit && im->memory_limit < im->memory_used + alloc_size) {
+    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)", im->memory_used + alloc_size);
   }
   
   DEBUG_TRACE("Allocating %d bytes for resized image of size %d x %d\n",
-    size, im->target_width, im->target_height);
+    alloc_size, im->target_width, im->target_height);
   New(0, im->outbuf, size, pix);
-  im->memory_used += size;
+  im->memory_used += alloc_size;
   
   // Determine padding if necessary
   if (im->keep_aspect) {
