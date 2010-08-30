@@ -401,6 +401,9 @@ image_downsize_gm_fixed_point(image *im)
     DEBUG_TRACE("Allocating temporary buffer size %d\n", im->target_width * im->height * sizeof(pix));
     New(0, im->tmpbuf, im->target_width * im->height, pix);
     
+    // Fill new space with the bgcolor or zeros
+    image_bgcolor_fill(im->tmpbuf, im->target_width * im->height, im->bgcolor);
+    
     // Resize horizontally from source -> tmp
     destination.rows    = im->height;
     destination.columns = im->target_width;
@@ -419,6 +422,9 @@ image_downsize_gm_fixed_point(image *im)
   else {
     DEBUG_TRACE("Allocating temporary buffer size %d\n", im->width * im->target_height * sizeof(pix));
     New(0, im->tmpbuf, im->width * im->target_height, pix);
+    
+    // Fill new space with the bgcolor or zeros
+    image_bgcolor_fill(im->tmpbuf, im->width * im->target_height, im->bgcolor);
     
     // Resize vertically from source -> tmp
     destination.rows    = im->target_height;

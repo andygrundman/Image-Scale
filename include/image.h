@@ -150,6 +150,7 @@ void image_downsize_gd(image *im);
 void image_downsize_gd_fixed_point(image *im);
 void image_downsize_gm(image *im);
 void image_alloc(image *im, int width, int height);
+void image_bgcolor_fill(pix *buf, int size, int bgcolor);
 void image_finish(image *im);
 inline void image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy);
 

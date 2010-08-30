@@ -196,6 +196,21 @@ image_alloc(image *im, int width, int height)
 }
 
 void
+image_bgcolor_fill(pix *buf, int size, int bgcolor)
+{
+  int alloc_size = size * sizeof(pix);
+  int i;
+  
+  if (bgcolor != 0) {
+    for (i = 0; i < alloc_size; i += sizeof(pix))
+      memcpy( ((char *)buf) + i, &bgcolor, sizeof(pix) );
+  }
+  else {
+    Zero(buf, size, pix);
+  }
+}
+
+void
 image_resize(image *im)
 {
   int size, alloc_size;
@@ -248,7 +263,6 @@ image_resize(image *im)
   if (im->keep_aspect) {
     float source_ar = 1.0 * im->width / im->height;
     float dest_ar   = 1.0 * im->target_width / im->target_height;
-    int i;
     
     if (source_ar >= dest_ar) {
       im->height_padding = (int)((im->target_height - (im->target_width / source_ar)) / 2);
@@ -259,14 +273,8 @@ image_resize(image *im)
       im->width_inner   = (int)(im->target_height * source_ar);
     }
     
-    // Fill new space with the bgcolor
-    if (im->bgcolor) {
-      for (i = 0; i < size; i += sizeof(pix))
-        memcpy( ((char *)im->outbuf) + i, &im->bgcolor, sizeof(pix) );
-    }
-    else {
-      Zero(im->outbuf, size, pix);
-    }
+    // Fill new space with the bgcolor or zeros
+    image_bgcolor_fill(im->outbuf, size, im->bgcolor);
     
     DEBUG_TRACE("Using width padding %d, inner width %d, height padding %d, inner height %d, bgcolor %x\n",
       im->width_padding, im->width_inner, im->height_padding, im->height_inner, im->bgcolor);

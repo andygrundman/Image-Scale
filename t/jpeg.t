@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 1;
+use Test::More tests => 202;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -67,8 +67,7 @@ for my $resize ( @resizes ) {
     }
 }
 
-# keep_aspect with padding
-# XXX gm keep_aspect not implemented yet
+# keep_aspect with height padding
 for my $resize ( @resizes ) {
     for my $type ( @types ) {
         my $outfile = _tmp("${type}_${resize}_50x50_keep_aspect.jpg");
@@ -76,12 +75,12 @@ for my $resize ( @resizes ) {
         my $im = Image::Scale->new( _f("${type}.jpg") );
         $im->$resize( { width => 50, height => 50, keep_aspect => 1 } );
         $im->save_jpeg($outfile);
-        my $data = $im->as_jpeg();
         
-        #is( _compare( _load($outfile), "${type}_${resize}_50x50_keep_aspect.jpg" ), 1, "JPEG $type $resize 50x50 keep_aspect file ok" );
-        #is( _compare( \$data, "${type}_${resize}_50x50_keep_aspect.jpg" ), 1, "JPEG $type $resize 50x50 keep_aspect scalar ok" );
+        is( _compare( _load($outfile), "${type}_${resize}_50x50_keep_aspect.jpg" ), 1, "JPEG $type $resize 50x50 keep_aspect file ok" );
     }
 }
+
+# XXX keep_aspect with width padding (use exif image with ignore_exif)
 
 # memory_limit
 {
@@ -107,18 +106,21 @@ for my $resize ( @resizes ) {
 
 # keep_aspect bgcolor
 {
-    my $outfile = _tmp("bgcolor.jpg");
+    for my $resize ( @resizes ) {
+        my $outfile = _tmp("bgcolor_${resize}.jpg");
     
-    my $im = Image::Scale->new( _f("rgb.jpg") );
-    $im->resize_gd( { width => 50, height => 50, keep_aspect => 1, bgcolor => 0x123456 } );
-    $im->save_jpeg($outfile);
+        my $im = Image::Scale->new( _f("rgb.jpg") );
+        $im->$resize( { width => 50, height => 50, keep_aspect => 1, bgcolor => 0x123456 } );
+        $im->save_jpeg($outfile);
     
-    is( _compare( _load($outfile), "bgcolor.jpg" ), 1, 'JPEG bgcolor ok' );
+        is( _compare( _load($outfile), "bgcolor_${resize}.jpg" ), 1, "JPEG bgcolor $resize ok" );
+    }
 }
 
 # Exif rotation
 # Exif with both width/height specified
 # Exif with keep_aspect
+EXIF:
 {
     my @rotations = qw(
         mirror_horiz
@@ -130,32 +132,33 @@ for my $resize ( @resizes ) {
         270_ccw
     );
     
-    for my $r ( @rotations ) {
-        my $outfile = _tmp("exif_${r}_50.jpg");
-        my $im = Image::Scale->new( _f("exif_${r}.jpg") );
-        $im->resize_gd( { width => 50 } );
-        $im->save_jpeg($outfile);
+    for my $resize ( @resizes ) {
+        for my $r ( @rotations ) {
+            my $outfile = _tmp("exif_${r}_${resize}_50.jpg");
+            my $im = Image::Scale->new( _f("exif_${r}.jpg") );
+            $im->$resize( { width => 50 } );
+            $im->save_jpeg($outfile);
         
-        is( _compare( _load($outfile), "exif_${r}_50.jpg" ), 1, "JPEG EXIF auto-rotation $r width 50 ok" );
-    }
-    
-    for my $r ( @rotations ) {
-        my $outfile = _tmp("exif_${r}_50x50.jpg");
-        my $im = Image::Scale->new( _f("exif_${r}.jpg") );
-        $im->resize_gd( { width => 50, height => 50 } );
-        $im->save_jpeg($outfile);
+            is( _compare( _load($outfile), "exif_${r}_${resize}_50.jpg" ), 1, "JPEG EXIF auto-rotation $r $resize width 50 ok" );
+        }
+  
+        for my $r ( @rotations ) {
+            my $outfile = _tmp("exif_${r}_${resize}_50x50.jpg");
+            my $im = Image::Scale->new( _f("exif_${r}.jpg") );
+            $im->$resize( { width => 50, height => 50 } );
+            $im->save_jpeg($outfile);
         
-        is( _compare( _load($outfile), "exif_${r}_50x50.jpg" ), 1, "JPEG EXIF auto-rotation $r 50x50 ok" );
-    }
-    
-    # XXX some of these have a strange 1-pixel shift, but not that important
-    for my $r ( @rotations ) {
-        my $outfile = _tmp("exif_${r}_50x50_keep_aspect.jpg");
-        my $im = Image::Scale->new( _f("exif_${r}.jpg") );
-        $im->resize_gd( { width => 50, height => 50, keep_aspect => 1 } );
-        $im->save_jpeg($outfile);
+            is( _compare( _load($outfile), "exif_${r}_${resize}_50x50.jpg" ), 1, "JPEG EXIF auto-rotation $r $resize 50x50 ok" );
+        }
+
+        for my $r ( @rotations ) {
+            my $outfile = _tmp("exif_${r}_${resize}_50x50_keep_aspect.jpg");
+            my $im = Image::Scale->new( _f("exif_${r}.jpg") );
+            $im->$resize( { width => 50, height => 50, keep_aspect => 1 } );
+            $im->save_jpeg($outfile);
         
-        is( _compare( _load($outfile), "exif_${r}_50x50_keep_aspect.jpg" ), 1, "JPEG EXIF auto-rotation $r 50x50 keep_aspect ok" );
+            is( _compare( _load($outfile), "exif_${r}_${resize}_50x50_keep_aspect.jpg" ), 1, "JPEG EXIF auto-rotation $r $resize 50x50 keep_aspect ok" );
+        }
     }
 }
         
@@ -168,6 +171,8 @@ for my $resize ( @resizes ) {
     
     is( _compare( _load($outfile), "exif_ignore_50.jpg" ), 1, "JPEG EXIF ignore_exif ok" );
 }
+
+# XXX multiple resize calls on same $im object, should throw away previous resize
 
 END {
     #File::Path::rmtree($tmpdir);
