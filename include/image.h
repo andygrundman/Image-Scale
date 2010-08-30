@@ -97,7 +97,9 @@ typedef struct {
   int32_t channels;
   int32_t has_alpha;
   int32_t orientation;
+  int32_t orientation_orig;
   int32_t memory_used;
+  int32_t outbuf_size;
   pix     *pixbuf; // Source image
   pix     *outbuf; // Resized image
   pix     *tmpbuf; // Temporary intermediate image

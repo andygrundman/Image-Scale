@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 190;
+use Test::More tests => 194;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -127,7 +127,6 @@ for my $resize ( @resizes ) {
 # Exif rotation
 # Exif with both width/height specified
 # Exif with keep_aspect
-EXIF:
 {
     my @rotations = qw(
         mirror_horiz
@@ -148,7 +147,7 @@ EXIF:
         
             is( _compare( _load($outfile), "exif_${r}_${resize}_50.jpg" ), 1, "JPEG EXIF auto-rotation $r $resize width 50 ok" );
         }
-  
+
         for my $r ( @rotations ) {
             my $outfile = _tmp("exif_${r}_${resize}_50x50.jpg");
             my $im = Image::Scale->new( _f("exif_${r}.jpg") );
@@ -179,7 +178,20 @@ EXIF:
     is( _compare( _load($outfile), "exif_ignore_50.jpg" ), 1, "JPEG EXIF ignore_exif ok" );
 }
 
-# XXX multiple resize calls on same $im object, should throw away previous resize
+# multiple resize calls on same $im object, should throw away previous resize data
+{
+    for my $resize ( @resizes ) {
+        my $outfile = _tmp("rgb_multiple_${resize}.jpg");
+        my $im = Image::Scale->new( _f("rgb.jpg") );
+        $im->$resize( { width => 50 } );
+        $im->$resize( { width => 75 } );
+        $im->save_jpeg($outfile);
+        
+        is( _compare( _load($outfile), "rgb_multiple_${resize}.jpg" ), 1, "JPEG multiple resize calls ok" );
+    }
+}
+
+# XXX resize from JPEG in scalar
 
 END {
     #File::Path::rmtree($tmpdir);

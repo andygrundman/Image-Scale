@@ -117,6 +117,9 @@ image_jpeg_parse_exif_orientation(image *im, Buffer *exif)
     
     buffer_consume(exif, 10);
   }
+  
+  // Save original orientation in case it is changed by ignore_exif
+  im->orientation_orig = im->orientation;
 }
 
 jmp_buf setjmp_buffer;
@@ -224,6 +227,23 @@ image_jpeg_load(image *im)
   int x, w, h, ofs;
   unsigned char *line[1], *ptr;
   
+  if (setjmp(setjmp_buffer)) {
+    warn("image_jpeg_load error\n");
+    return;
+  }
+  
+  // If reusing the object a second time, we need to read the header again
+  if (im->cinfo->global_state == 200) { // DSTATE_START
+    DEBUG_TRACE("Reusing JPEG object, re-reading header\n");
+    if (im->stdio_fp != NULL) {
+      fseek(im->stdio_fp, 0, SEEK_SET);
+    }
+    else {
+      // XXX reset SV read
+    }
+    jpeg_read_header(im->cinfo, TRUE);
+  }
+  
   im->cinfo->do_fancy_upsampling = FALSE;
   im->cinfo->do_block_smoothing = FALSE;
   
@@ -244,10 +264,6 @@ image_jpeg_load(image *im)
   
   DEBUG_TRACE("Using JPEG scale factor %d/%d, new output dimensions %d x %d\n",
     im->cinfo->scale_num, im->cinfo->scale_denom, w, h);
-  
-  if (setjmp(setjmp_buffer)) {
-    return;
-  }
   
   // Save filename in case any warnings/errors occur
   strncpy(filename, SvPVX(im->path), FILENAME_LEN);
@@ -296,6 +312,8 @@ image_jpeg_load(image *im)
   }
   
   Safefree(ptr);
+  
+  jpeg_finish_decompress(im->cinfo);
 }
 
 static void

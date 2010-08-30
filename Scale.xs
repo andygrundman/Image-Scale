@@ -60,6 +60,18 @@ CODE:
 {
   image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
   
+  // Reset options if resize is being called multiple times
+  if (im->target_width) {
+    im->target_width  = 0;
+    im->target_height = 0;
+    im->keep_aspect   = 0;
+    im->orientation   = im->orientation_orig;
+    im->bgcolor       = 0;
+    im->memory_limit  = 0;
+    im->resize_type   = IMAGE_SCALE_TYPE_GD;
+    im->filter        = 0;
+  }
+  
   if (my_hv_exists(opts, "width"))
     im->target_width = SvIV(*(my_hv_fetch(opts, "width")));
   

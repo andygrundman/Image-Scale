@@ -59,38 +59,40 @@ image_init(HV *self, image *im)
       croak("data is not a scalar ref\n");
   }
   
-  im->pixbuf         = NULL;
-  im->outbuf         = NULL;
-  im->type           = UNKNOWN;
-  im->sv_offset      = 0;
-  im->width          = 0;
-  im->height         = 0;
-  im->width_padding  = 0;
-  im->width_inner    = 0;
-  im->height_padding = 0;
-  im->height_inner   = 0;
-  im->flipped        = 0;
-  im->bpp            = 0;
-  im->channels       = 0;
-  im->has_alpha      = 0;
-  im->orientation    = ORIENTATION_NORMAL;
-  im->memory_limit   = 0;
-  im->target_width   = 0;
-  im->target_height  = 0;
-  im->keep_aspect    = 0;
-  im->resize_type    = IMAGE_SCALE_TYPE_GD;
-  im->filter         = 0;
-  im->bgcolor        = 0;
+  im->pixbuf           = NULL;
+  im->outbuf           = NULL;
+  im->outbuf_size      = 0;
+  im->type             = UNKNOWN;
+  im->sv_offset        = 0;
+  im->width            = 0;
+  im->height           = 0;
+  im->width_padding    = 0;
+  im->width_inner      = 0;
+  im->height_padding   = 0;
+  im->height_inner     = 0;
+  im->flipped          = 0;
+  im->bpp              = 0;
+  im->channels         = 0;
+  im->has_alpha        = 0;
+  im->orientation      = ORIENTATION_NORMAL;
+  im->orientation_orig = ORIENTATION_NORMAL;
+  im->memory_limit     = 0;
+  im->target_width     = 0;
+  im->target_height    = 0;
+  im->keep_aspect      = 0;
+  im->resize_type      = IMAGE_SCALE_TYPE_GD;
+  im->filter           = 0;
+  im->bgcolor          = 0;
   
 #ifdef HAVE_JPEG
-  im->cinfo         = NULL;
+  im->cinfo            = NULL;
 #endif
 #ifdef HAVE_PNG
-  im->png_ptr       = NULL;
-  im->info_ptr      = NULL;
+  im->png_ptr          = NULL;
+  im->info_ptr         = NULL;
 #endif
 #ifdef HAVE_GIF
-  im->gif           = NULL;
+  im->gif              = NULL;
 #endif
   
   Newz(0, im->buf, sizeof(Buffer), Buffer);
@@ -213,26 +215,40 @@ image_bgcolor_fill(pix *buf, int size, int bgcolor)
 void
 image_resize(image *im)
 {
-  int size, alloc_size;
+  int size;
+  
+  // Check if we have already resized an image with this object,
+  // if so, clear everything we've already done
+  if (im->outbuf != NULL) {
+    DEBUG_TRACE("Object already used for a resize, resetting\n");
+    Safefree(im->outbuf);
+    im->outbuf = NULL;
+    im->memory_used -= im->outbuf_size;
+    
+    // For a JPEG we have to reset the scaled size in case we're resizing larger than before
+    if (im->type == JPEG) {
+      im->width = im->cinfo->image_width;
+      im->height = im->cinfo->image_height;
+      
+      DEBUG_TRACE("JPEG dimensions set back to original %d x %d\n", im->width, im->height);
+    }
+  }
   
   // Load the source image into memory
   switch (im->type) {
 #ifdef HAVE_JPEG
     case JPEG:
       image_jpeg_load(im);
-      image_jpeg_finish(im);
       break;
 #endif
 #ifdef HAVE_PNG
     case PNG:
       image_png_load(im);
-      image_png_finish(im);
       break;
 #endif
 #ifdef HAVE_GIF
     case GIF:
       image_gif_load(im);
-      image_gif_finish(im);
       break;
 #endif
     case BMP:
@@ -248,16 +264,16 @@ image_resize(image *im)
   
   // Allocate space for the resized image
   size = im->target_width * im->target_height;
-  alloc_size = size * sizeof(pix);
+  im->outbuf_size = size * sizeof(pix);
   
-  if (im->memory_limit && im->memory_limit < im->memory_used + alloc_size) {
-    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)", im->memory_used + alloc_size);
+  if (im->memory_limit && im->memory_limit < im->memory_used + im->outbuf_size) {
+    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)", im->memory_used + im->outbuf_size);
   }
   
   DEBUG_TRACE("Allocating %d bytes for resized image of size %d x %d\n",
-    alloc_size, im->target_width, im->target_height);
+    im->outbuf_size, im->target_width, im->target_height);
   New(0, im->outbuf, size, pix);
-  im->memory_used += alloc_size;
+  im->memory_used += im->outbuf_size;
   
   // Determine padding if necessary
   if (im->keep_aspect) {
@@ -299,6 +315,7 @@ image_resize(image *im)
   }
   
   // If the image was rotated, swap the width/height if necessary
+  // This is needed for the save_*() functions to output the correct size
   if (im->orientation >= 5) {
     int tmp = im->target_height;
     im->target_height = im->target_width;
@@ -347,8 +364,10 @@ image_finish(image *im)
   if (im->pixbuf != NULL && im->pixbuf != im->outbuf) // pixbuf = outbuf if resizing to same dimensions
     Safefree(im->pixbuf);
   
-  if (im->outbuf != NULL)
+  if (im->outbuf != NULL) {
     Safefree(im->outbuf);
+    im->outbuf_size = 0;
+  }
   
   DEBUG_TRACE("Freed all memory, total used: %d\n", im->memory_used);
   im->memory_used = 0;
