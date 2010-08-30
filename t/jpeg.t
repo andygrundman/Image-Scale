@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 194;
+use Test::More tests => 196;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -191,7 +191,34 @@ for my $resize ( @resizes ) {
     }
 }
 
-# XXX resize from JPEG in scalar
+# resize from JPEG in scalar
+{
+    open my $fh, '<', _f("rgb.jpg");
+    my $data = do { $/ = undef; <$fh> };
+    close $fh;
+    
+    my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
+    my $im = Image::Scale->new(\$data);
+    $im->resize_gd_fixed_point( { width => 100 } );
+    $im->save_jpeg($outfile);
+    
+    is( _compare( _load($outfile), "rgb_resize_gd_fixed_point_w100.jpg" ), 1, "JPEG resize_gd_fixed_point from scalar ok" );
+}
+
+# resize multiple from JPEG scalar
+{
+    open my $fh, '<', _f("rgb.jpg");
+    my $data = do { $/ = undef; <$fh> };
+    close $fh;
+    
+    my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
+    my $im = Image::Scale->new(\$data);
+    $im->resize_gd_fixed_point( { width => 150 } );
+    $im->resize_gd_fixed_point( { width => 100 } );
+    $im->save_jpeg($outfile);
+    
+    is( _compare( _load($outfile), "rgb_resize_gd_fixed_point_w100.jpg" ), 1, "JPEG resize_gd_fixed_point multiple from scalar ok" );
+}
 
 END {
     #File::Path::rmtree($tmpdir);

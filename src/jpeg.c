@@ -30,6 +30,69 @@ struct sv_dst_mgr {
   JOCTET *off;
 };
 
+// Source manager to read JPEG from an SV
+static void
+sv_src_mgr_init(j_decompress_ptr cinfo)
+{
+  // Nothing
+}
+
+static boolean
+sv_src_mgr_fill_input_buffer(j_decompress_ptr cinfo)
+{
+  // All data must already be in the SV,
+  // so if this is called treat it as an error
+  static JOCTET mybuffer[4];
+  
+  // Insert a fake EOI marker
+  mybuffer[0] = (JOCTET) 0xFF;
+  mybuffer[1] = (JOCTET) JPEG_EOI;
+  
+  cinfo->src->next_input_byte = mybuffer;
+  cinfo->src->bytes_in_buffer = 2;
+  
+  return TRUE;
+}
+
+static void
+sv_src_mgr_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
+{
+  if (num_bytes > 0) {
+    while (num_bytes > (long)cinfo->src->bytes_in_buffer) {
+      num_bytes -= (long)cinfo->src->bytes_in_buffer;
+      (void) (*cinfo->src->fill_input_buffer)(cinfo);
+    }
+    
+    cinfo->src->next_input_byte += (size_t)num_bytes;
+    cinfo->src->bytes_in_buffer -= (size_t)num_bytes;
+  }
+}
+
+static void
+sv_src_mgr_term_source(j_decompress_ptr cinfo)
+{
+  // Nothing
+}
+
+static void
+image_jpeg_sv_src(j_decompress_ptr cinfo, unsigned char *buf, long size)
+{
+  if (cinfo->src == NULL) {
+    cinfo->src = (struct jpeg_source_mgr *)
+      (*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT, sizeof(struct jpeg_source_mgr));
+  }
+  
+  cinfo->src->init_source       = sv_src_mgr_init;
+  cinfo->src->fill_input_buffer = sv_src_mgr_fill_input_buffer;
+  cinfo->src->skip_input_data   = sv_src_mgr_skip_input_data;
+  cinfo->src->resync_to_restart = jpeg_resync_to_restart; // use default
+  cinfo->src->term_source       = sv_src_mgr_term_source;
+  cinfo->src->bytes_in_buffer   = (size_t)size;
+  cinfo->src->next_input_byte   = (JOCTET *)buf;
+  
+  DEBUG_TRACE("Init SV JPEG src, %ld bytes\n", size);
+}
+
 // Destination manager to copy compressed data to an SV
 static void
 sv_dst_mgr_init(j_compress_ptr cinfo)
@@ -180,8 +243,7 @@ image_jpeg_read_header(image *im, const char *file)
   }
   else {
     // Reading from SV
-    // XXX jpeg_mem_src only available in libjpeg-8
-    //jpeg_mem_src(im->cinfo, (unsigned char *)SvPVX(im->sv_data), sv_len(im->sv_data));
+    image_jpeg_sv_src(im->cinfo, (unsigned char *)SvPVX(im->sv_data), sv_len(im->sv_data));
   }
   
   // Save APP1 marker for EXIF, only need the first 1024 bytes
@@ -228,19 +290,22 @@ image_jpeg_load(image *im)
   unsigned char *line[1], *ptr;
   
   if (setjmp(setjmp_buffer)) {
-    warn("image_jpeg_load error\n");
     return;
   }
   
   // If reusing the object a second time, we need to read the header again
   if (im->cinfo->global_state == 200) { // DSTATE_START
     DEBUG_TRACE("Reusing JPEG object, re-reading header\n");
+    
     if (im->stdio_fp != NULL) {
       fseek(im->stdio_fp, 0, SEEK_SET);
     }
     else {
-      // XXX reset SV read
+      // reset SV read
+      im->cinfo->src->bytes_in_buffer = (size_t)sv_len(im->sv_data);
+      im->cinfo->src->next_input_byte = (JOCTET *)SvPVX(im->sv_data);
     }
+    
     jpeg_read_header(im->cinfo, TRUE);
   }
   

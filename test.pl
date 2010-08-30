@@ -12,7 +12,7 @@ my $path = shift;
 my $height = shift;
 
 # From file
-if (1) {
+if (0) {
     my $img = Image::Scale->new($path);
     
     #$img->resize_gd( { height => $height, width => $height, keep_aspect => 1 } );
@@ -34,13 +34,14 @@ if (1) {
 }
 
 # From data
-if (0) {
+if (1) {
     my $data = read_file($path);
     
     my $img = Image::Scale->new(\$data);
     
     $img->resize_gd_fixed_point( { height => $height } );
+    $img->resize_gd_fixed_point( { height => $height } );
     
-    $img->save_png('resized.png');
+    $img->save_jpeg('resized.jpg');
 }
     

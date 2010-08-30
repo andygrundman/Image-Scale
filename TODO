@@ -1,13 +1,12 @@
 Series-based resizing would be faster if implemented directly
 Support < 24-bit BMP files, RLE compression
-Multiple calls to resize() on PNG at least doesn't work
+Multiple calls to resize() on PNG, GIF, BMP
 Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
 Support new($file, $offset, $length) for images in audio files with latest Audio::Scan
-jpeg_mem_src not supported in libjpeg v6, need to use a custom source handler instead
 png_set_expand_gray_1_2_4_to_8 not supported in libpng 1.2
 Improve error handling, return 0 from resize() ?
-Investigate libjpeg-turbo
+Investigate libjpeg-turbo for x86 builds
 Display library versions during Makefile.PL
 
 Tests:
