@@ -223,7 +223,7 @@ END {
 }
 
 sub _f {    
-    return catfile( $FindBin::Bin, 'images', shift );
+    return catfile( $FindBin::Bin, 'images', 'jpg', shift );
 }
 
 sub _tmp {
