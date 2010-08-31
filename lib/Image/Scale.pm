@@ -79,14 +79,14 @@ __END__
 
 =head1 NAME
 
-Image::Scale - Fast, high-quality image resizing
+Image::Scale - Fast, high-quality fixed-point image resizing
 
 =head1 SYNOPSIS
 
     use Image::Scale
     
     # Resize to 150 width and save to a file
-    my $img = Image::Scale->new('image.jpg');
+    my $img = Image::Scale->new('image.jpg') || die "Invalid JPEG file";
     $img->resize_gd( { width => 150 } );
     $img->save_jpeg('resized.jpg');
 
@@ -95,9 +95,9 @@ Image::Scale - Fast, high-quality image resizing
 This module implements several resizing algorithms with a focus on low overhead,
 speed and minimal features. Algorithms available are:
 
-  GD's copyResampled
+  GD's copyResampled (floating-point)
   GD's copyResampled fixed-point (useful on embedded devices/NAS devices)
-  GraphicsMagick's assortment of resize filters
+  GraphicsMagick's assortment of resize filters (floating-point)
   GraphicsMagick's Triangle filter in fixed-point
 
 Supported image formats include JPEG, GIF, PNG, and BMP for input, and
@@ -125,6 +125,9 @@ GIF, PNG, or BMP file.
 
 Raw image data may also be passed in as a scalar reference.  Using a file path
 is recommended when possible as this is more efficient and requires less memory.
+
+new() reads the image header, and will return undef if the header is invalid,
+so be sure to check for this.
 
 =head2 width()
 
@@ -193,7 +196,7 @@ PNG will not be transparent.  The default bgcolor value is 0x000000 (black).
     ignore_exif => 1
 
 By default, if a JPEG image contains an EXIF tag with orientation info, the image will be
-rotated accordingly during resizing.  To disable this feature, set ignore_exif => 1.
+rotated accordingly during resizing.  To disable this feature, set ignore_exif to 1.
 
     memory_limit => $limit_in_bytes
 

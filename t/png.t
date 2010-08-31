@@ -31,6 +31,8 @@ my @resizes = qw(
     resize_gd_fixed_point
 );
 
+goto TMP;
+
 # width/height
 for my $type ( @types ) {    
     my $im = Image::Scale->new( _f("${type}.png") );
@@ -85,6 +87,48 @@ for my $resize ( @resizes ) {
 }
 
 # XXX test for valid header but error during image_png_load()
+
+# multiple resize calls on same $im object, should throw away previous resize data
+TMP:
+{
+    for my $resize ( @resizes ) {
+        my $outfile = _tmp("rgba_multiple_${resize}.png");
+        my $im = Image::Scale->new( _f("rgba.png") );
+        $im->$resize( { width => 50 } );
+        $im->$resize( { width => 75 } );
+        $im->save_png($outfile);
+        
+        is( _compare( _load($outfile), "rgba_multiple_${resize}.png" ), 1, "PNG multiple resize $resize ok" );
+    }
+}
+exit;
+
+# resize from JPEG in scalar
+{
+    open my $fh, '<', _f("rgb.jpg");
+    my $data = do { $/ = undef; <$fh> };
+    close $fh;
+    
+    my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
+    my $im = Image::Scale->new(\$data);
+    $im->resize_gd_fixed_point( { width => 100 } );
+    $im->save_jpeg($outfile);
+    
+    is( _compare( _load($outfile), "rgb_resize_gd_fixed_point_w100.jpg" ), 1, "JPEG resize_gd_fixed_point from scalar ok" );
+}
+
+# resize multiple from JPEG scalar
+{
+    my $dataref = _load( _f("rgb.jpg") );
+    
+    my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
+    my $im = Image::Scale->new($dataref);
+    $im->resize_gd_fixed_point( { width => 150 } );
+    $im->resize_gd_fixed_point( { width => 100 } );
+    $im->save_jpeg($outfile);
+    
+    is( _compare( _load($outfile), "rgb_resize_gd_fixed_point_w100.jpg" ), 1, "JPEG resize_gd_fixed_point multiple from scalar ok" );
+}
 
 END {
     #File::Path::rmtree($tmpdir);

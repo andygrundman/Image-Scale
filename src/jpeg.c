@@ -298,7 +298,7 @@ image_jpeg_load(image *im)
   }
   
   // If reusing the object a second time, we need to read the header again
-  if (im->cinfo->global_state == 200) { // DSTATE_START
+  if (im->used) {
     DEBUG_TRACE("Reusing JPEG object, re-reading header\n");
     
     if (im->stdio_fp != NULL) {
@@ -437,6 +437,9 @@ image_jpeg_save(image *im, const char *path, int quality)
   struct jpeg_error_mgr jerr;
   FILE *out;
   
+  if (im->outbuf == NULL)
+    croak("Image::Scale cannot write JPEG with no output data\n");
+  
   if ((out = fopen(path, "wb")) == NULL) {
     croak("Image::Scale cannot open %s for writing", path);
   }
@@ -457,6 +460,9 @@ image_jpeg_to_sv(image *im, int quality, SV *sv_buf)
   struct jpeg_compress_struct cinfo;
   struct jpeg_error_mgr jerr;
   struct sv_dst_mgr dst;
+  
+  if (im->outbuf == NULL)
+    croak("Image::Scale cannot write JPEG with no output data\n");
   
   cinfo.err = jpeg_std_error(&jerr);
   jpeg_create_compress(&cinfo);

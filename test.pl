@@ -19,6 +19,7 @@ if (1) {
     
     #$img->resize_gd( { height => $height, width => $height, keep_aspect => 1 } );
     $img->resize_gd_fixed_point( { height => $height } );
+    $img->resize_gd_fixed_point( { height => $height } );
     #$img->resize_gm( { height => $height, width => $height, keep_aspect => 1 } );
     #$img->resize_gm_fixed_point( { height => $height, width => $height, keep_aspect => 1 } );
 

@@ -85,6 +85,7 @@ image_init(HV *self, image *im)
   im->resize_type      = IMAGE_SCALE_TYPE_GD;
   im->filter           = 0;
   im->bgcolor          = 0;
+  im->used             = 0;
   
 #ifdef HAVE_JPEG
   im->cinfo            = NULL;
@@ -238,11 +239,13 @@ image_resize(image *im)
   
   // Check if we have already resized an image with this object,
   // if so, clear everything we've already done
-  if (im->outbuf != NULL) {
+  if (im->used) {
     DEBUG_TRACE("Object already used for a resize, resetting\n");
-    Safefree(im->outbuf);
-    im->outbuf = NULL;
-    im->memory_used -= im->outbuf_size;
+    if (im->outbuf != NULL) {
+      Safefree(im->outbuf);
+      im->outbuf = NULL;
+      im->memory_used -= im->outbuf_size;
+    }
     
     // For a JPEG we have to reset the scaled size in case we're resizing larger than before
     if (im->type == JPEG) {
@@ -356,6 +359,8 @@ image_resize(image *im)
   im->pixbuf = NULL;
   
 out:
+  im->used++;
+  
   return ret;
 }
     		  

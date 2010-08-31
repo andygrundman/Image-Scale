@@ -100,6 +100,7 @@ typedef struct {
   int32_t orientation_orig;
   int32_t memory_used;
   int32_t outbuf_size;
+  int32_t used; // How many times the object has been used to resize
   pix     *pixbuf; // Source image
   pix     *outbuf; // Resized image
   pix     *tmpbuf; // Temporary intermediate image

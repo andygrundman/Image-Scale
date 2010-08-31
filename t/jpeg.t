@@ -189,7 +189,7 @@ for my $resize ( @resizes ) {
         $im->$resize( { width => 75 } );
         $im->save_jpeg($outfile);
         
-        is( _compare( _load($outfile), "rgb_multiple_${resize}.jpg" ), 1, "JPEG multiple resize calls ok" );
+        is( _compare( _load($outfile), "rgb_multiple_${resize}.jpg" ), 1, "JPEG multiple resize $resize ok" );
     }
 }
 

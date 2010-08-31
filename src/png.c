@@ -137,6 +137,21 @@ image_png_load(image *im)
     return 0;
   }
   
+  // If reusing the object a second time, we need to read the header again
+  if (im->used) {
+    DEBUG_TRACE("Reusing PNG object, re-reading header\n");
+    
+    if (im->stdio_fp != NULL) {
+      fseek(im->stdio_fp, 0, SEEK_SET);
+    }
+    else {
+      // reset SV read
+      im->sv_offset = 0;
+    }
+    
+    png_read_info(im->png_ptr, im->info_ptr);
+  }
+  
   bit_depth  = png_get_bit_depth(im->png_ptr, im->info_ptr);
   color_type = png_get_color_type(im->png_ptr, im->info_ptr);
   
@@ -312,20 +327,23 @@ image_png_save(image *im, const char *path)
   png_infop info_ptr;
   FILE *out;
   
+  if (im->outbuf == NULL)
+    croak("Image::Scale cannot write PNG with no output data\n");
+  
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (!png_ptr) {
-    croak("Image::Scale could not initialize libpng");
+    croak("Image::Scale could not initialize libpng\n");
   }
   
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr) {
     png_destroy_write_struct(&png_ptr, NULL);
-    croak("Image::Scale could not initialize libpng");
+    croak("Image::Scale could not initialize libpng\n");
   }
 
   if ((out = fopen(path, "wb")) == NULL) {
     png_destroy_write_struct(&png_ptr, &info_ptr);
-    croak("Image::Scale cannot open %s for writing", path);
+    croak("Image::Scale cannot open %s for writing\n", path);
   }
   
   png_init_io(png_ptr, out);
@@ -358,6 +376,9 @@ image_png_to_sv(image *im, SV *sv_buf)
 {
   png_structp png_ptr;
   png_infop info_ptr;
+  
+  if (im->outbuf == NULL)
+    croak("Image::Scale cannot write PNG with no output data\n");
   
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (!png_ptr) {
