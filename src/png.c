@@ -48,6 +48,7 @@ image_png_read_header(image *im, const char *file)
   }
   
   if ( setjmp( png_jmpbuf(im->png_ptr) ) ) {
+    warn("image_png_read_header error\n");
     return;
   }
   
@@ -67,6 +68,25 @@ image_png_read_header(image *im, const char *file)
   im->height    = png_get_image_height(im->png_ptr, im->info_ptr);
   im->channels  = png_get_channels(im->png_ptr, im->info_ptr);
   im->has_alpha = 1;
+}
+
+static void
+image_png_interlace_pass_gray(image *im, unsigned char *ptr, int start_y, int stride_y, int start_x, int stride_x)
+{
+  int x, y;
+  
+  for (y = 0; y < im->height; y++) {
+    png_read_row(im->png_ptr, ptr, NULL);
+    if (start_y == 0) {
+      start_y = stride_y;
+      for (x = start_x; x < im->width; x += stride_x) {
+        im->pixbuf[y * im->width + x] = COL_FULL(
+          ptr[x * 2], ptr[x * 2], ptr[x * 2], ptr[x * 2 + 1]
+        );
+      }
+    }
+    start_y--;
+  }
 }
 
 static void
@@ -96,6 +116,7 @@ image_png_load(image *im)
   unsigned char *ptr;
   
   if ( setjmp( png_jmpbuf(im->png_ptr) ) ) {
+    warn("image_png_load error\n");
     return;
   }
   
@@ -103,23 +124,22 @@ image_png_load(image *im)
   color_type = png_get_color_type(im->png_ptr, im->info_ptr);
   
   if (color_type == PNG_COLOR_TYPE_PALETTE)
-    png_set_palette_to_rgb(im->png_ptr);
-  
-  if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
-    png_set_expand_gray_1_2_4_to_8(im->png_ptr);
-  
-  if (png_get_valid(im->png_ptr, im->info_ptr, PNG_INFO_tRNS))
-    png_set_tRNS_to_alpha(im->png_ptr);
+    png_set_expand(im->png_ptr); // png_set_palette_to_rgb(im->png_ptr);
+  else if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
+    png_set_expand(im->png_ptr); // png_set_expand_gray_1_2_4_to_8(im->png_ptr);
+  else if (png_get_valid(im->png_ptr, im->info_ptr, PNG_INFO_tRNS))
+    png_set_expand(im->png_ptr); // png_set_tRNS_to_alpha(im->png_ptr);
   
   if (bit_depth == 16)
     png_set_strip_16(im->png_ptr);
   else if (bit_depth < 8)
     png_set_packing(im->png_ptr);
   
-  if (color_type == PNG_COLOR_TYPE_RGB || color_type == PNG_COLOR_TYPE_GRAY) {
-    png_set_add_alpha(im->png_ptr, 0xff, PNG_FILLER_AFTER);
+  // Make non-alpha RGB 32-bit and Gray/Palette 16-bit for easier handling
+  if ( !(color_type & PNG_COLOR_MASK_ALPHA) ) {
+      png_set_add_alpha(im->png_ptr, 0xFF, PNG_FILLER_AFTER);
   }
-    
+  
   num_passes = png_set_interlace_handling(im->png_ptr);
   
   DEBUG_TRACE("png bit_depth %d, color_type %d, channels %d, num_passes %d\n", bit_depth, color_type, im->channels, num_passes);
@@ -130,52 +150,69 @@ image_png_load(image *im)
   
   New(0, ptr, png_get_rowbytes(im->png_ptr, im->info_ptr), unsigned char);
   
-  // XXX interlaced could be optimized better, as pixbuf operates on pixels that did not change
+  ofs = 0;
   
-  if (num_passes == 1) {
-    // Non-interlaced
-    ofs = 0;
-    for (y = 0; y < im->height; y++) {
-      png_read_row(im->png_ptr, ptr, NULL);    
-      for (x = 0; x < im->width; x++) {
-			  im->pixbuf[ofs++] = COL_FULL(ptr[x * 4], ptr[x * 4 + 1], ptr[x * 4 + 2], ptr[x * 4 + 3]);
-			}
+  if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) { // Grayscale (Alpha)
+    if (num_passes == 1) { // Non-interlaced
+      for (y = 0; y < im->height; y++) {
+        png_read_row(im->png_ptr, ptr, NULL);
+        for (x = 0; x < im->width; x++) {
+  			  im->pixbuf[ofs++] = COL_FULL(ptr[x * 2], ptr[x * 2], ptr[x * 2], ptr[x * 2 + 1]);
+  			}
+      }
+    }
+    else if (num_passes == 7) { // Interlaced
+      image_png_interlace_pass_gray(im, ptr, 0, 8, 0, 8);
+      image_png_interlace_pass_gray(im, ptr, 0, 8, 4, 8);
+      image_png_interlace_pass_gray(im, ptr, 4, 8, 0, 4);
+      image_png_interlace_pass_gray(im, ptr, 0, 4, 2, 4);
+      image_png_interlace_pass_gray(im, ptr, 2, 4, 0, 2);
+      image_png_interlace_pass_gray(im, ptr, 0, 2, 1, 2);
+      image_png_interlace_pass_gray(im, ptr, 1, 2, 0, 1);
     }
   }
-  else if (num_passes == 7) {
-    // Interlaced
-      
-    // The first pass will return an image 1/8 as wide as the entire image
-    // (every 8th column starting in column 0)
-    // and 1/8 as high as the original (every 8th row starting in row 0)
-    image_png_interlace_pass(im, ptr, 0, 8, 0, 8);
+  else { // RGB(A)
+    if (num_passes == 1) { // Non-interlaced
+      for (y = 0; y < im->height; y++) {
+        png_read_row(im->png_ptr, ptr, NULL);
+        for (x = 0; x < im->width; x++) {
+  			  im->pixbuf[ofs++] = COL_FULL(ptr[x * 4], ptr[x * 4 + 1], ptr[x * 4 + 2], ptr[x * 4 + 3]);
+  			}
+      }
+    }
+    else if (num_passes == 7) { // Interlaced
+      // The first pass will return an image 1/8 as wide as the entire image
+      // (every 8th column starting in column 0)
+      // and 1/8 as high as the original (every 8th row starting in row 0)
+      image_png_interlace_pass(im, ptr, 0, 8, 0, 8);
     
-    // The second will be 1/8 as wide (starting in column 4)
-    // and 1/8 as high (also starting in row 0)
-    image_png_interlace_pass(im, ptr, 0, 8, 4, 8);
+      // The second will be 1/8 as wide (starting in column 4)
+      // and 1/8 as high (also starting in row 0)
+      image_png_interlace_pass(im, ptr, 0, 8, 4, 8);
     
-    // The third pass will be 1/4 as wide (every 4th pixel starting in column 0)
-    // and 1/8 as high (every 8th row starting in row 4)
-    image_png_interlace_pass(im, ptr, 4, 8, 0, 4);
+      // The third pass will be 1/4 as wide (every 4th pixel starting in column 0)
+      // and 1/8 as high (every 8th row starting in row 4)
+      image_png_interlace_pass(im, ptr, 4, 8, 0, 4);
     
-    // The fourth pass will be 1/4 as wide and 1/4 as high
-    // (every 4th column starting in column 2, and every 4th row starting in row 0)
-    image_png_interlace_pass(im, ptr, 0, 4, 2, 4);
+      // The fourth pass will be 1/4 as wide and 1/4 as high
+      // (every 4th column starting in column 2, and every 4th row starting in row 0)
+      image_png_interlace_pass(im, ptr, 0, 4, 2, 4);
     
-    // The fifth pass will return an image 1/2 as wide,
-    // and 1/4 as high (starting at column 0 and row 2)
-    image_png_interlace_pass(im, ptr, 2, 4, 0, 2);
+      // The fifth pass will return an image 1/2 as wide,
+      // and 1/4 as high (starting at column 0 and row 2)
+      image_png_interlace_pass(im, ptr, 2, 4, 0, 2);
     
-    // The sixth pass will be 1/2 as wide and 1/2 as high as the original
-    // (starting in column 1 and row 0)
-    image_png_interlace_pass(im, ptr, 0, 2, 1, 2);
+      // The sixth pass will be 1/2 as wide and 1/2 as high as the original
+      // (starting in column 1 and row 0)
+      image_png_interlace_pass(im, ptr, 0, 2, 1, 2);
     
-    // The seventh pass will be as wide as the original, and 1/2 as high,
-    // containing all of the odd numbered scanlines.
-    image_png_interlace_pass(im, ptr, 1, 2, 0, 1);
-  }
-  else {
-    croak("Image::Scale unsupported PNG interlace type (%d passes)\n", num_passes);
+      // The seventh pass will be as wide as the original, and 1/2 as high,
+      // containing all of the odd numbered scanlines.
+      image_png_interlace_pass(im, ptr, 1, 2, 0, 1);
+    }
+    else {
+      croak("Image::Scale unsupported PNG interlace type (%d passes)\n", num_passes);
+    }
   }
   
   Safefree(ptr);
@@ -249,6 +286,7 @@ image_png_save(image *im, const char *path)
   }
   
   if (setjmp( png_jmpbuf(png_ptr) )) {
+    warn("image_png_save error\n");
     png_destroy_write_struct(&png_ptr, &info_ptr);
     fclose(out);
     return;
@@ -296,6 +334,7 @@ image_png_to_sv(image *im, SV *sv_buf)
   }
   
   if (setjmp( png_jmpbuf(png_ptr) )) {
+    warn("image_png_to_sv error\n");
     png_destroy_write_struct(&png_ptr, &info_ptr);
     return;
   }

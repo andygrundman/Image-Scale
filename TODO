@@ -8,36 +8,14 @@ png_set_expand_gray_1_2_4_to_8 not supported in libpng 1.2
 Improve error handling, return 0 from resize() ?
 Investigate libjpeg-turbo for x86 builds
 Display library versions during Makefile.PL
+Skip jpg/gif/png tests if library isn't supported
 
 Tests:
   width/height all formats
   keep_aspect, both width/height padding
   Corrupt/invalid files in all formats, triggering longjmp's
   memory_limit
-  JPEG with 3 components
-  JPEG with 1 component (grayscale)
-  JPEG CMYK
-  Progressive JPEG color
-  Progressive JPEG gray
-  JPEG w/ Exif little-endian (digital cameras)
-  JPEG w/ Exif normal orientation, 90, 180, 270, are the mirror ones ever used?
-  JPEG w/ Exif big-endian (iPhone camera)
-  PNG palette
-  PNG gray
-  PNG gray alpha
-  PNG RGB
-  PNG RGBA
-  PNG interlaced
-  PNG with tRNS
-  PNG 16-bit
-  PNG with bgcolor set (non-transparent)
-  GIF non-interlaced
-  GIF transparent
-  GIF interlaced
-  BMP 24-bit
-  BMP 32-bit (alpha)
-  BMP 16, 8, 4, 1-bit
-  BMP RLE compressed
+  PNG <8-bit gray
 
 In buildme.sh static build script, could comment out optional libjpeg features to reduce library size:
   DCT_IFAST_SUPPORTED
@@ -48,3 +26,5 @@ In buildme.sh static build script, could comment out optional libjpeg features t
   BLOCK_SMOOTHING_SUPPORTED
   QUANT_1PASS_SUPPORTED
   QUANT_2PASS_SUPPORTED
+  
+Various PNG defines too, see pngconf.h
