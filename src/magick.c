@@ -785,7 +785,7 @@ image_downsize_gm(image *im)
   if (support < filters[filter].support)
     support = filters[filter].support;
   
-  DEBUG_TRACE("ContributionInfo allocated for %d items\n", (size_t)(2.0 * MAX(support, 0.5) + 3));
+  DEBUG_TRACE("ContributionInfo allocated for %ld items\n", (size_t)(2.0 * MAX(support, 0.5) + 3));
   New(0, contribution, (size_t)(2.0 * MAX(support, 0.5) + 3), ContributionInfo);
   
   DEBUG_TRACE("order %d, x_factor %f, y_factor %f, support %f\n", order, x_factor, y_factor, support);
@@ -795,7 +795,7 @@ image_downsize_gm(image *im)
   source.buf     = im->pixbuf;
   
   if (order) {
-    DEBUG_TRACE("Allocating temporary buffer size %d\n", im->target_width * im->height * sizeof(pix));
+    DEBUG_TRACE("Allocating temporary buffer size %ld\n", im->target_width * im->height * sizeof(pix));
     New(0, im->tmpbuf, im->target_width * im->height, pix);
     
     // Fill new space with the bgcolor or zeros
@@ -817,7 +817,7 @@ image_downsize_gm(image *im)
     image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution, 1);    
   }
   else {    
-    DEBUG_TRACE("Allocating temporary buffer size %d\n", im->width * im->target_height * sizeof(pix));
+    DEBUG_TRACE("Allocating temporary buffer size %ld\n", im->width * im->target_height * sizeof(pix));
     New(0, im->tmpbuf, im->width * im->target_height, pix);
     
     // Fill new space with the bgcolor or zeros
