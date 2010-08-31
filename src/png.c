@@ -22,7 +22,7 @@ image_png_read_sv(png_structp png_ptr, png_bytep data, png_size_t len)
  png_memcpy(data, SvPVX(im->sv_data) + im->sv_offset, len);
  im->sv_offset += len;
 
- DEBUG_TRACE("image_png_read_sv read %ld bytes\n", len);
+ DEBUG_TRACE("image_png_read_sv read %ld bytes @ offset %ld\n", len, im->sv_offset - len);
 }
 
 static void
@@ -137,19 +137,17 @@ image_png_load(image *im)
     return 0;
   }
   
-  // If reusing the object a second time, we need to read the header again
+  // If reusing the object a second time, we need to completely create a new png struct
   if (im->used) {
-    DEBUG_TRACE("Reusing PNG object, re-reading header\n");
-    
+    DEBUG_TRACE("Recreating libpng objects\n");
     if (im->stdio_fp != NULL) {
-      fseek(im->stdio_fp, 0, SEEK_SET);
+      image_png_finish(im);
+      image_png_read_header(im, SvPVX(im->path));
     }
     else {
-      // reset SV read
-      im->sv_offset = 0;
+      image_png_finish(im);
+      image_png_read_header(im, NULL);
     }
-    
-    png_read_info(im->png_ptr, im->info_ptr);
   }
   
   bit_depth  = png_get_bit_depth(im->png_ptr, im->info_ptr);
@@ -251,7 +249,8 @@ image_png_load(image *im)
   
   Safefree(ptr);
   
-  png_read_end(im->png_ptr, im->info_ptr);
+  // This is not required, so we can save some time by not reading post-image chunks
+  //png_read_end(im->png_ptr, im->info_ptr);
   
   return 1;
 }

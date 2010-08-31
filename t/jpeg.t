@@ -195,12 +195,10 @@ for my $resize ( @resizes ) {
 
 # resize from JPEG in scalar
 {
-    open my $fh, '<', _f("rgb.jpg");
-    my $data = do { $/ = undef; <$fh> };
-    close $fh;
+    my $dataref = _load( _f("rgb.jpg") );
     
     my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
-    my $im = Image::Scale->new(\$data);
+    my $im = Image::Scale->new($dataref);
     $im->resize_gd_fixed_point( { width => 100 } );
     $im->save_jpeg($outfile);
     

@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 41;
+use Test::More tests => 44;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -30,8 +30,6 @@ my @types = qw(
 my @resizes = qw(
     resize_gd_fixed_point
 );
-
-goto TMP;
 
 # width/height
 for my $type ( @types ) {    
@@ -89,7 +87,6 @@ for my $resize ( @resizes ) {
 # XXX test for valid header but error during image_png_load()
 
 # multiple resize calls on same $im object, should throw away previous resize data
-TMP:
 {
     for my $resize ( @resizes ) {
         my $outfile = _tmp("rgba_multiple_${resize}.png");
@@ -101,33 +98,30 @@ TMP:
         is( _compare( _load($outfile), "rgba_multiple_${resize}.png" ), 1, "PNG multiple resize $resize ok" );
     }
 }
-exit;
 
-# resize from JPEG in scalar
+# resize from PNG in scalar
 {
-    open my $fh, '<', _f("rgb.jpg");
-    my $data = do { $/ = undef; <$fh> };
-    close $fh;
+    my $dataref = _load( _f("rgba.png") );
     
-    my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
-    my $im = Image::Scale->new(\$data);
+    my $outfile = _tmp("rgba_resize_gd_fixed_point_w100.png");
+    my $im = Image::Scale->new($dataref);
     $im->resize_gd_fixed_point( { width => 100 } );
-    $im->save_jpeg($outfile);
+    $im->save_png($outfile);
     
-    is( _compare( _load($outfile), "rgb_resize_gd_fixed_point_w100.jpg" ), 1, "JPEG resize_gd_fixed_point from scalar ok" );
+    is( _compare( _load($outfile), "rgba_resize_gd_fixed_point_w100.png" ), 1, "PNG resize_gd_fixed_point from scalar ok" );
 }
 
-# resize multiple from JPEG scalar
+# resize multiple from PNG scalar
 {
-    my $dataref = _load( _f("rgb.jpg") );
+    my $dataref = _load( _f("rgba.png") );
     
-    my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
+    my $outfile = _tmp("rgba_resize_gd_fixed_point_w100.png");
     my $im = Image::Scale->new($dataref);
     $im->resize_gd_fixed_point( { width => 150 } );
     $im->resize_gd_fixed_point( { width => 100 } );
-    $im->save_jpeg($outfile);
+    $im->save_png($outfile);
     
-    is( _compare( _load($outfile), "rgb_resize_gd_fixed_point_w100.jpg" ), 1, "JPEG resize_gd_fixed_point multiple from scalar ok" );
+    is( _compare( _load($outfile), "rgba_resize_gd_fixed_point_w100.png" ), 1, "PNG resize_gd_fixed_point multiple from scalar ok" );
 }
 
 END {
