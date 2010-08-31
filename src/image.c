@@ -40,6 +40,7 @@ image_init(HV *self, image *im)
 {
   unsigned char *bptr;
   char *file = NULL;
+  int ret = 1;
   
   if (my_hv_exists(self, "file")) {
     // Input from file
@@ -63,6 +64,7 @@ image_init(HV *self, image *im)
   im->outbuf           = NULL;
   im->outbuf_size      = 0;
   im->type             = UNKNOWN;
+  im->stdio_fp         = NULL;
   im->sv_offset        = 0;
   im->width            = 0;
   im->height           = 0;
@@ -102,10 +104,7 @@ image_init(HV *self, image *im)
   // Determine type of file from magic bytes
   if (im->fh != NULL) {
     if ( !_check_buf(im->fh, im->buf, 8, 1024) ) {
-      // Free mem in case croak is trapped
-      buffer_free(im->buf);
-      Safefree(im->buf);
-      im->buf = NULL;
+      image_finish(im);
       croak("Unable to read image header for %s", file);
     }
   }
@@ -122,6 +121,7 @@ image_init(HV *self, image *im)
 #ifdef HAVE_JPEG
         im->type = JPEG;
 #else
+        image_finish(im);
         croak("Image::Scale was not built with JPEG support\n");
 #endif
       }
@@ -132,6 +132,7 @@ image_init(HV *self, image *im)
 #ifdef HAVE_PNG
           im->type = PNG;
 #else
+          image_finish(im);
           croak("Image::Scale was not built with PNG support\n");
 #endif
       }
@@ -142,6 +143,7 @@ image_init(HV *self, image *im)
 #ifdef HAVE_GIF
           im->type = GIF;
 #else
+          image_finish(im);
           croak("Image::Scale was not built with GIF support\n");
 #endif
       }
@@ -155,16 +157,22 @@ image_init(HV *self, image *im)
   
   DEBUG_TRACE("Image type: %d\n", im->type);
     
-  // Read image header via type-specific function to determine dimensions 
+  // Read image header via type-specific function to determine dimensions
   switch (im->type) {
 #ifdef HAVE_JPEG
     case JPEG:
-      image_jpeg_read_header(im, file);
+      if ( !image_jpeg_read_header(im, file) ) {
+        ret = 0;
+        goto out;
+      }
       break;
 #endif
 #ifdef HAVE_PNG
     case PNG:
-      image_png_read_header(im, file);
+      if ( !image_png_read_header(im, file) ) {
+        ret = 0;
+        goto out;
+      }
       break;
 #endif
 #ifdef HAVE_GIF
@@ -175,11 +183,20 @@ image_init(HV *self, image *im)
     case BMP:
       image_bmp_read_header(im, file);
       break;
+    case UNKNOWN:
+      warn("Image::Scale unknown file type (%s), first 8 bytes were: %02x %02x %02x %02x %02x %02x %02x %02x\n",
+        SvPVX(im->path), bptr[0], bptr[1], bptr[2], bptr[3], bptr[4], bptr[5], bptr[6], bptr[7]);
+      ret = 0;
+      break;
   }
   
   DEBUG_TRACE("Image dimenensions: %d x %d, channels %d\n", im->width, im->height, im->channels);
   
-  return 1;
+out:
+  if (ret == 0)
+    image_finish(im);
+  
+  return ret;
 }
 
 void
@@ -188,6 +205,7 @@ image_alloc(image *im, int width, int height)
   int size = width * height * sizeof(pix);
   
   if (im->memory_limit && im->memory_limit < im->memory_used + size) {
+    image_finish(im);
     croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)", im->memory_used + size);
   }
   
@@ -212,10 +230,11 @@ image_bgcolor_fill(pix *buf, int size, int bgcolor)
   }
 }
 
-void
+int
 image_resize(image *im)
 {
   int size;
+  int ret = 1;
   
   // Check if we have already resized an image with this object,
   // if so, clear everything we've already done
@@ -238,12 +257,18 @@ image_resize(image *im)
   switch (im->type) {
 #ifdef HAVE_JPEG
     case JPEG:
-      image_jpeg_load(im);
+      if ( !image_jpeg_load(im) ) {
+        ret = 0;
+        goto out;
+      }
       break;
 #endif
 #ifdef HAVE_PNG
     case PNG:
-      image_png_load(im);
+      if ( !image_png_load(im) ) {
+        ret = 0;
+        goto out;
+      }
       break;
 #endif
 #ifdef HAVE_GIF
@@ -259,7 +284,7 @@ image_resize(image *im)
   // Special case for equal size without resizing
   if (im->width == im->target_width && im->height == im->target_height) {
     im->outbuf = im->pixbuf;
-    return;
+    goto out;
   }
   
   // Allocate space for the resized image
@@ -267,6 +292,7 @@ image_resize(image *im)
   im->outbuf_size = size * sizeof(pix);
   
   if (im->memory_limit && im->memory_limit < im->memory_used + im->outbuf_size) {
+    image_finish(im);
     croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)", im->memory_used + im->outbuf_size);
   }
   
@@ -311,6 +337,7 @@ image_resize(image *im)
       image_downsize_gm_fixed_point(im);
       break;
     default:
+      image_finish(im);
       croak("Image::Scale unknown resize type %d\n", im->resize_type);
   }
   
@@ -327,6 +354,9 @@ image_resize(image *im)
   // After resizing we can release the source image memory
   Safefree(im->pixbuf);
   im->pixbuf = NULL;
+  
+out:
+  return ret;
 }
     		  
 void
@@ -334,6 +364,8 @@ image_finish(image *im)
 {
   // Called at DESTROY-time to release all memory if needed.
   // Items here may be freed elsewhere so must check that they aren't NULL
+  
+  DEBUG_TRACE("image_finish\n");
   
   switch (im->type) {
 #ifdef HAVE_JPEG
@@ -359,14 +391,23 @@ image_finish(image *im)
   if (im->buf != NULL) {
     buffer_free(im->buf);
     Safefree(im->buf);
+    im->buf = NULL;
   }
   
-  if (im->pixbuf != NULL && im->pixbuf != im->outbuf) // pixbuf = outbuf if resizing to same dimensions
+  if (im->pixbuf != NULL && im->pixbuf != im->outbuf) { // pixbuf = outbuf if resizing to same dimensions
     Safefree(im->pixbuf);
+    im->pixbuf = NULL;
+  }
   
   if (im->outbuf != NULL) {
     Safefree(im->outbuf);
+    im->outbuf = NULL;
     im->outbuf_size = 0;
+  }
+  
+  if (im->path != NULL) {
+    SvREFCNT_dec(im->path);
+    im->path = NULL;
   }
   
   DEBUG_TRACE("Freed all memory, total used: %d\n", im->memory_used);
@@ -406,6 +447,7 @@ image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy)
       *oy = im->target_width - 1 - x;
       break;
     default:
+      image_finish(im);
       croak("Image::Scale cannot rotate, unknown orientation value: %d\n", im->orientation);
       break;
   }

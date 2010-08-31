@@ -25,19 +25,28 @@ image_png_read_sv(png_structp png_ptr, png_bytep data, png_size_t len)
  DEBUG_TRACE("image_png_read_sv read %ld bytes\n", len);
 }
 
-void
+static void
+image_png_error(png_structp png_ptr, png_const_charp error_msg)
+{
+  image *im = (image *)png_get_error_ptr(png_ptr);
+  
+  warn("Image::Scale libpng error: %s (%s)\n", error_msg, SvPVX(im->path));
+  
+  longjmp(png_jmpbuf(png_ptr), 1);
+}
+
+static void
+image_png_warning(png_structp png_ptr, png_const_charp warning_msg)
+{
+  image *im = (image *)png_get_error_ptr(png_ptr);
+  
+  warn("Image::Scale libpng warning: %s (%s)\n", warning_msg, SvPVX(im->path));
+}
+
+int
 image_png_read_header(image *im, const char *file)
 {
-  if (file != NULL) {
-    if ( (im->stdio_fp = fopen(file, "rb")) == NULL ) {
-  		croak("Image::Scale could not open %s for reading", file);
-  	}
-	}
-	else {
-    im->stdio_fp = NULL;
-  }
-	
-  im->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+  im->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, (png_voidp)im, image_png_error, image_png_warning);
   if ( !im->png_ptr )
     croak("Image::Scale could not initialize libpng");
   
@@ -48,16 +57,20 @@ image_png_read_header(image *im, const char *file)
   }
   
   if ( setjmp( png_jmpbuf(im->png_ptr) ) ) {
-    warn("image_png_read_header error\n");
-    return;
+    image_png_finish(im);
+    return 0;
   }
   
   if (file != NULL) {
     // Reading from file
+    if ( (im->stdio_fp = fopen(file, "rb")) == NULL ) {
+  		croak("Image::Scale could not open %s for reading", file);
+  	}
     png_init_io(im->png_ptr, im->stdio_fp);
-  }
-  else {
-    // Reading from SV
+	}
+	else {
+	  // Reading from SV
+    im->stdio_fp = NULL;
     im->sv_offset = 0;
     png_set_read_fn(im->png_ptr, im, image_png_read_sv);
   }
@@ -68,6 +81,8 @@ image_png_read_header(image *im, const char *file)
   im->height    = png_get_image_height(im->png_ptr, im->info_ptr);
   im->channels  = png_get_channels(im->png_ptr, im->info_ptr);
   im->has_alpha = 1;
+  
+  return 1;
 }
 
 static void
@@ -108,16 +123,18 @@ image_png_interlace_pass(image *im, unsigned char *ptr, int start_y, int stride_
   }
 }
 
-void
+int
 image_png_load(image *im)
 {
   int bit_depth, color_type, num_passes, x, y;
   int ofs;
-  unsigned char *ptr;
+  unsigned char *ptr = NULL;
   
   if ( setjmp( png_jmpbuf(im->png_ptr) ) ) {
-    warn("image_png_load error\n");
-    return;
+    if (ptr != NULL)
+      Safefree(ptr);
+    image_png_finish(im);
+    return 0;
   }
   
   bit_depth  = png_get_bit_depth(im->png_ptr, im->info_ptr);
@@ -135,9 +152,9 @@ image_png_load(image *im)
   else if (bit_depth < 8)
     png_set_packing(im->png_ptr);
   
-  // Make non-alpha RGB 32-bit and Gray/Palette 16-bit for easier handling
+  // Make non-alpha RGB/Palette 32-bit and Gray 16-bit for easier handling
   if ( !(color_type & PNG_COLOR_MASK_ALPHA) ) {
-      png_set_add_alpha(im->png_ptr, 0xFF, PNG_FILLER_AFTER);
+    png_set_add_alpha(im->png_ptr, 0xFF, PNG_FILLER_AFTER);
   }
   
   num_passes = png_set_interlace_handling(im->png_ptr);
@@ -218,15 +235,21 @@ image_png_load(image *im)
   Safefree(ptr);
   
   png_read_end(im->png_ptr, im->info_ptr);
+  
+  return 1;
 }
 
 static void
 image_png_compress(image *im, png_structp png_ptr, png_infop info_ptr)
 {
   int i, x, y;
-  unsigned char *ptr;
+  unsigned char *ptr = NULL;
   
-  /* XXX
+  if (setjmp( png_jmpbuf(png_ptr) )) {
+    return;
+  }
+  
+  /* XXX if input is grayscale, output should be same
   switch (im->channels) {
     case 4: color_space = PNG_COLOR_TYPE_RGB_ALPHA;  break;
     case 3: color_space = PNG_COLOR_TYPE_RGB;        break;
@@ -257,8 +280,6 @@ image_png_compress(image *im, png_structp png_ptr, png_infop info_ptr)
   Safefree(ptr);
   
   png_write_end(png_ptr, info_ptr);
-  
-  png_destroy_write_struct(&png_ptr, &info_ptr);
 }
 
 void
@@ -268,28 +289,20 @@ image_png_save(image *im, const char *path)
   png_infop info_ptr;
   FILE *out;
   
-  if ((out = fopen(path, "wb")) == NULL) {
-    croak("Image::Scale cannot open %s for writing", path);
-  }
-  
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (!png_ptr) {
-    fclose(out);
     croak("Image::Scale could not initialize libpng");
   }
   
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr) {
     png_destroy_write_struct(&png_ptr, NULL);
-    fclose(out);
     croak("Image::Scale could not initialize libpng");
   }
-  
-  if (setjmp( png_jmpbuf(png_ptr) )) {
-    warn("image_png_save error\n");
+
+  if ((out = fopen(path, "wb")) == NULL) {
     png_destroy_write_struct(&png_ptr, &info_ptr);
-    fclose(out);
-    return;
+    croak("Image::Scale cannot open %s for writing", path);
   }
   
   png_init_io(png_ptr, out);
@@ -297,6 +310,7 @@ image_png_save(image *im, const char *path)
   image_png_compress(im, png_ptr, info_ptr);
   
   fclose(out);
+  png_destroy_write_struct(&png_ptr, &info_ptr);
 }
 
 static void
@@ -333,15 +347,11 @@ image_png_to_sv(image *im, SV *sv_buf)
     croak("Image::Scale could not initialize libpng");
   }
   
-  if (setjmp( png_jmpbuf(png_ptr) )) {
-    warn("image_png_to_sv error\n");
-    png_destroy_write_struct(&png_ptr, &info_ptr);
-    return;
-  }
-  
   png_set_write_fn(png_ptr, sv_buf, image_png_write_sv, image_png_flush_sv);
   
   image_png_compress(im, png_ptr, info_ptr);
+  
+  png_destroy_write_struct(&png_ptr, &info_ptr);
 }
 
 void
@@ -350,8 +360,12 @@ image_png_finish(image *im)
   if (im->png_ptr != NULL) {
     png_destroy_read_struct(&im->png_ptr, &im->info_ptr, NULL);
     im->png_ptr = NULL;
+    DEBUG_TRACE("libpng destroy\n");
   }
   
-  if (im->stdio_fp != NULL)
+  if (im->stdio_fp != NULL) {
     fclose(im->stdio_fp);
+    im->stdio_fp = NULL;
+    DEBUG_TRACE("Closed PNG input file\n");
+  }
 }

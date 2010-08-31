@@ -96,7 +96,7 @@ for my $resize ( @resizes ) {
     like( $@, qr/memory_limit exceeded/, 'JPEG memory_limit ok' );
 }
 
-# corrupt truncated file
+# corrupt truncated file but will still resize with a gray area
 {
     Test::NoWarnings::clear_warnings();
     
@@ -106,10 +106,12 @@ for my $resize ( @resizes ) {
     $im->save_jpeg($outfile);
     
     # Test that the correct warning was output
-    like( (Test::NoWarnings::warnings())[0]->getMessage, qr/Image::Scale error: Premature end of JPEG file/, 'JPEG corrupt truncated warning output ok' );
+    like( (Test::NoWarnings::warnings())[0]->getMessage, qr/Image::Scale libjpeg error: Premature end of JPEG file/, 'JPEG corrupt truncated warning output ok' );
     
     is( _compare( _load($outfile), "truncated_50.jpg" ), 1, 'JPEG corrupt truncated resize_gd ok' );
 }
+
+# XXX corrupt file resulting in a fatal error
 
 # keep_aspect bgcolor
 {
@@ -217,6 +219,8 @@ for my $resize ( @resizes ) {
     
     is( _compare( _load($outfile), "rgb_resize_gd_fixed_point_w100.jpg" ), 1, "JPEG resize_gd_fixed_point multiple from scalar ok" );
 }
+
+# XXX fatal errors during compression, will this ever actually happen?
 
 END {
     File::Path::rmtree($tmpdir);

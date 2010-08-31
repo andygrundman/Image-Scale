@@ -3,8 +3,8 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 36;
-#require Test::NoWarnings;
+use Test::More tests => 41;
+require Test::NoWarnings;
 
 use Image::Scale;
 
@@ -55,6 +55,36 @@ for my $resize ( @resizes ) {
 }
 
 # XXX palette_bkgd
+
+# corrupt files from PNG test suite
+# x00n0g01 - empty 0x0 grayscale file 
+# xcrn0g04 - added cr bytes
+{
+    Test::NoWarnings::clear_warnings();
+
+    my $im = Image::Scale->new( _f("x00n0g01.png") );
+    
+    # Test that $im is undef when new fails
+    ok( !defined $im, 'new() returns undef on error ok' );
+    
+    # Test that the correct warnings were output
+    my @warnings = Test::NoWarnings::warnings();
+    like( $warnings[0]->getMessage, qr/Image::Scale libpng warning: Image width is zero in IHDR/, 'PNG corrupt warning 1 output ok' );
+    like( $warnings[1]->getMessage, qr/Image::Scale libpng warning: Image height is zero in IHDR/, 'PNG corrupt warning 2 output ok' );
+    like( $warnings[2]->getMessage, qr/Image::Scale libpng error: Invalid IHDR data/, 'PNG corrupt error 1 output ok' );
+}
+
+{
+    Test::NoWarnings::clear_warnings();
+
+    my $im = Image::Scale->new( _f("xcrn0g04.png") );
+    
+    # This file won't be seen as PNG, so generates a generic unknown warning
+    my @warnings = Test::NoWarnings::warnings();
+    like( $warnings[0]->getMessage, qr/Image::Scale unknown file type/, 'PNG corrupt header ok' );
+}
+
+# XXX test for valid header but error during image_png_load()
 
 END {
     #File::Path::rmtree($tmpdir);

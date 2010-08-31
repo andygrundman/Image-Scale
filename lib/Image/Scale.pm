@@ -2,8 +2,6 @@ package Image::Scale;
 
 use strict;
 
-use constant JPEG_QUALITY              => 90;
-
 use constant IMAGE_SCALE_TYPE_GD       => 0;
 use constant IMAGE_SCALE_TYPE_GD_FIXED => 1;
 use constant IMAGE_SCALE_TYPE_GM       => 2;
@@ -45,6 +43,9 @@ sub new {
     # XS init, determine the file type and image size
     $self->{_image} = $self->__init();
     
+    # __init will return undef on any errors
+    return if !$self->{_image};
+    
     return $self;
 }
 
@@ -68,9 +69,9 @@ sub DESTROY {
     my $self = shift;
     
     # XS cleanup
-    $self->__cleanup( $self->{_image} );
+    $self->__cleanup( $self->{_image} ) if $self->{_image};
     
-    close $self->{_fh} if $self->{_fh};
+    close $self->{_fh} if $self->{_fh}; 
 }
 
 1;

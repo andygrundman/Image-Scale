@@ -202,10 +202,10 @@ libjpeg_output_message(j_common_ptr cinfo)
   /* Create the message */
   (*cinfo->err->format_message) (cinfo, buffer);
   
-  warn("Image::Scale error: %s (%s)\n", buffer, filename);
+  warn("Image::Scale libjpeg error: %s (%s)\n", buffer, filename);
 }
 
-void
+int
 image_jpeg_read_header(image *im, const char *file)
 {
   if (file != NULL) {
@@ -227,7 +227,8 @@ image_jpeg_read_header(image *im, const char *file)
   im->jpeg_error_pub->output_message = libjpeg_output_message;
   
   if (setjmp(setjmp_buffer)) {
-    return;
+    image_jpeg_finish(im);
+    return 0;
   }
   
   // Save filename in case any warnings/errors occur
@@ -280,9 +281,11 @@ image_jpeg_read_header(image *im, const char *file)
       marker = marker->next;
     }
   }
+  
+  return 1;
 }
 
-void
+int
 image_jpeg_load(image *im)
 {
   float scale_factor;
@@ -290,7 +293,8 @@ image_jpeg_load(image *im)
   unsigned char *line[1], *ptr;
   
   if (setjmp(setjmp_buffer)) {
-    return;
+    image_jpeg_finish(im);
+    return 0;
   }
   
   // If reusing the object a second time, we need to read the header again
@@ -379,6 +383,8 @@ image_jpeg_load(image *im)
   Safefree(ptr);
   
   jpeg_finish_decompress(im->cinfo);
+  
+  return 1;
 }
 
 static void
@@ -386,13 +392,19 @@ image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
 {
   JSAMPROW row_pointer[1];
   int row_stride;
-  unsigned char *data;
+  unsigned char *data = NULL;
   int i, x;
   
   cinfo->image_width      = im->target_width;
   cinfo->image_height     = im->target_height;
   cinfo->input_components = 3;
   cinfo->in_color_space   = JCS_RGB; // output is always RGB even if source was grayscale
+  
+  if (setjmp(setjmp_buffer)) {
+    if (data != NULL)
+      Safefree(data);
+    return;
+  }
   
   jpeg_set_defaults(cinfo);
   jpeg_set_quality(cinfo, quality, TRUE);
@@ -414,7 +426,7 @@ image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
   }
   
   jpeg_finish_compress(cinfo);
-  jpeg_destroy_compress(cinfo);
+  
   Safefree(data);
 }
 
@@ -434,7 +446,8 @@ image_jpeg_save(image *im, const char *path, int quality)
   jpeg_stdio_dest(&cinfo, out);
   
   image_jpeg_compress(im, &cinfo, quality);
-
+  
+  jpeg_destroy_compress(&cinfo);
   fclose(out);
 }
 
@@ -450,12 +463,15 @@ image_jpeg_to_sv(image *im, int quality, SV *sv_buf)
   image_jpeg_sv_dest(&cinfo, &dst, sv_buf);
   
   image_jpeg_compress(im, &cinfo, quality);
+  
+  jpeg_destroy_compress(&cinfo);
 }
 
 void
 image_jpeg_finish(image *im)
 {
   if (im->cinfo != NULL) {
+    DEBUG_TRACE("libjpeg destroy\n");
     jpeg_destroy_decompress(im->cinfo);
     Safefree(im->cinfo);
     im->cinfo = NULL;
@@ -468,5 +484,6 @@ image_jpeg_finish(image *im)
   if (im->stdio_fp != NULL) {
     fclose(im->stdio_fp);
     im->stdio_fp = NULL;
+    DEBUG_TRACE("Closed JPEG input file\n");
   }
 }

@@ -24,7 +24,11 @@ PPCODE:
   
   SvPOK_only(pv);
   
-  image_init(self, im);
+  if ( !image_init(self, im) ) {
+    // Return undef on any errors during header reading
+    SvREFCNT_dec(pv);
+    XSRETURN_UNDEF;
+  }
   
   XPUSHs( sv_2mortal( sv_bless(
     newRV_noinc(pv),
@@ -54,7 +58,7 @@ CODE:
 OUTPUT:
   RETVAL
 
-void
+int
 resize(HV *self, HV *opts)
 CODE:
 {
@@ -158,8 +162,10 @@ CODE:
   
   DEBUG_TRACE("Resizing from %d x %d -> %d x %d\n", im->width, im->height, im->target_width, im->target_height);
   
-  image_resize(im);
+  RETVAL = image_resize(im);
 }
+OUTPUT:
+  RETVAL
 
 #ifdef HAVE_JPEG
 void
