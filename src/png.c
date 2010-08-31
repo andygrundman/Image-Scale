@@ -128,7 +128,7 @@ image_png_load(image *im)
 {
   int bit_depth, color_type, num_passes, x, y;
   int ofs;
-  unsigned char *ptr = NULL;
+  volatile unsigned char *ptr = NULL; // volatile = won't be rolled back if longjmp is called
   
   if ( setjmp( png_jmpbuf(im->png_ptr) ) ) {
     if (ptr != NULL)
@@ -140,8 +140,10 @@ image_png_load(image *im)
   bit_depth  = png_get_bit_depth(im->png_ptr, im->info_ptr);
   color_type = png_get_color_type(im->png_ptr, im->info_ptr);
   
-  if (color_type == PNG_COLOR_TYPE_PALETTE)
+  if (color_type == PNG_COLOR_TYPE_PALETTE) {
     png_set_expand(im->png_ptr); // png_set_palette_to_rgb(im->png_ptr);
+    im->channels = 4;
+  }
   else if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
     png_set_expand(im->png_ptr); // png_set_expand_gray_1_2_4_to_8(im->png_ptr);
   else if (png_get_valid(im->png_ptr, im->info_ptr, PNG_INFO_tRNS))
@@ -172,26 +174,26 @@ image_png_load(image *im)
   if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA) { // Grayscale (Alpha)
     if (num_passes == 1) { // Non-interlaced
       for (y = 0; y < im->height; y++) {
-        png_read_row(im->png_ptr, ptr, NULL);
+        png_read_row(im->png_ptr, (unsigned char *)ptr, NULL);
         for (x = 0; x < im->width; x++) {
   			  im->pixbuf[ofs++] = COL_FULL(ptr[x * 2], ptr[x * 2], ptr[x * 2], ptr[x * 2 + 1]);
   			}
       }
     }
     else if (num_passes == 7) { // Interlaced
-      image_png_interlace_pass_gray(im, ptr, 0, 8, 0, 8);
-      image_png_interlace_pass_gray(im, ptr, 0, 8, 4, 8);
-      image_png_interlace_pass_gray(im, ptr, 4, 8, 0, 4);
-      image_png_interlace_pass_gray(im, ptr, 0, 4, 2, 4);
-      image_png_interlace_pass_gray(im, ptr, 2, 4, 0, 2);
-      image_png_interlace_pass_gray(im, ptr, 0, 2, 1, 2);
-      image_png_interlace_pass_gray(im, ptr, 1, 2, 0, 1);
+      image_png_interlace_pass_gray(im, (unsigned char *)ptr, 0, 8, 0, 8);
+      image_png_interlace_pass_gray(im, (unsigned char *)ptr, 0, 8, 4, 8);
+      image_png_interlace_pass_gray(im, (unsigned char *)ptr, 4, 8, 0, 4);
+      image_png_interlace_pass_gray(im, (unsigned char *)ptr, 0, 4, 2, 4);
+      image_png_interlace_pass_gray(im, (unsigned char *)ptr, 2, 4, 0, 2);
+      image_png_interlace_pass_gray(im, (unsigned char *)ptr, 0, 2, 1, 2);
+      image_png_interlace_pass_gray(im, (unsigned char *)ptr, 1, 2, 0, 1);
     }
   }
   else { // RGB(A)
     if (num_passes == 1) { // Non-interlaced
       for (y = 0; y < im->height; y++) {
-        png_read_row(im->png_ptr, ptr, NULL);
+        png_read_row(im->png_ptr, (unsigned char *)ptr, NULL);
         for (x = 0; x < im->width; x++) {
   			  im->pixbuf[ofs++] = COL_FULL(ptr[x * 4], ptr[x * 4 + 1], ptr[x * 4 + 2], ptr[x * 4 + 3]);
   			}
@@ -201,31 +203,31 @@ image_png_load(image *im)
       // The first pass will return an image 1/8 as wide as the entire image
       // (every 8th column starting in column 0)
       // and 1/8 as high as the original (every 8th row starting in row 0)
-      image_png_interlace_pass(im, ptr, 0, 8, 0, 8);
+      image_png_interlace_pass(im, (unsigned char *)ptr, 0, 8, 0, 8);
     
       // The second will be 1/8 as wide (starting in column 4)
       // and 1/8 as high (also starting in row 0)
-      image_png_interlace_pass(im, ptr, 0, 8, 4, 8);
+      image_png_interlace_pass(im, (unsigned char *)ptr, 0, 8, 4, 8);
     
       // The third pass will be 1/4 as wide (every 4th pixel starting in column 0)
       // and 1/8 as high (every 8th row starting in row 4)
-      image_png_interlace_pass(im, ptr, 4, 8, 0, 4);
+      image_png_interlace_pass(im, (unsigned char *)ptr, 4, 8, 0, 4);
     
       // The fourth pass will be 1/4 as wide and 1/4 as high
       // (every 4th column starting in column 2, and every 4th row starting in row 0)
-      image_png_interlace_pass(im, ptr, 0, 4, 2, 4);
+      image_png_interlace_pass(im, (unsigned char *)ptr, 0, 4, 2, 4);
     
       // The fifth pass will return an image 1/2 as wide,
       // and 1/4 as high (starting at column 0 and row 2)
-      image_png_interlace_pass(im, ptr, 2, 4, 0, 2);
+      image_png_interlace_pass(im, (unsigned char *)ptr, 2, 4, 0, 2);
     
       // The sixth pass will be 1/2 as wide and 1/2 as high as the original
       // (starting in column 1 and row 0)
-      image_png_interlace_pass(im, ptr, 0, 2, 1, 2);
+      image_png_interlace_pass(im, (unsigned char *)ptr, 0, 2, 1, 2);
     
       // The seventh pass will be as wide as the original, and 1/2 as high,
       // containing all of the odd numbered scanlines.
-      image_png_interlace_pass(im, ptr, 1, 2, 0, 1);
+      image_png_interlace_pass(im, (unsigned char *)ptr, 1, 2, 0, 1);
     }
     else {
       croak("Image::Scale unsupported PNG interlace type (%d passes)\n", num_passes);
@@ -243,22 +245,30 @@ static void
 image_png_compress(image *im, png_structp png_ptr, png_infop info_ptr)
 {
   int i, x, y;
-  unsigned char *ptr = NULL;
+  int color_space = PNG_COLOR_TYPE_RGB_ALPHA;
+  volatile unsigned char *ptr = NULL;
   
   if (setjmp( png_jmpbuf(png_ptr) )) {
+    if (ptr != NULL)
+      Safefree(ptr);
     return;
   }
   
-  /* XXX if input is grayscale, output should be same
+  // Match output color space with input file
   switch (im->channels) {
-    case 4: color_space = PNG_COLOR_TYPE_RGB_ALPHA;  break;
-    case 3: color_space = PNG_COLOR_TYPE_RGB;        break;
-    case 2: color_space = PNG_COLOR_TYPE_GRAY_ALPHA; break;
-    case 1: color_space = PNG_COLOR_TYPE_GRAY;       break;
+    case 4:
+    case 3:
+      DEBUG_TRACE("PNG output color space set to RGBA\n");
+      color_space = PNG_COLOR_TYPE_RGB_ALPHA;
+      break;
+    case 2:
+    case 1:
+      DEBUG_TRACE("PNG output color space set to gray alpha\n");
+      color_space = PNG_COLOR_TYPE_GRAY_ALPHA;
+      break;
   }
-  */
   
-  png_set_IHDR(png_ptr, info_ptr, im->target_width, im->target_height, 8, PNG_COLOR_TYPE_RGB_ALPHA,
+  png_set_IHDR(png_ptr, info_ptr, im->target_width, im->target_height, 8, color_space,
     PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
   
   png_write_info(png_ptr, info_ptr);
@@ -266,16 +276,29 @@ image_png_compress(image *im, png_structp png_ptr, png_infop info_ptr)
   New(0, ptr, png_get_rowbytes(png_ptr, info_ptr), unsigned char);
   
   i = 0;
-  for (y = 0; y < im->target_height; y++) {
-    for (x = 0; x < im->target_width; x++)	{
-			ptr[x * 4]     = COL_RED(im->outbuf[i]);
-			ptr[x * 4 + 1] = COL_GREEN(im->outbuf[i]);
-			ptr[x * 4 + 2] = COL_BLUE(im->outbuf[i]);
-      ptr[x * 4 + 3] = COL_ALPHA(im->outbuf[i]);
-			i++;
-		}
-		png_write_row(png_ptr, (png_bytep)ptr);
-	}
+  
+  if (color_space == PNG_COLOR_TYPE_GRAY_ALPHA) {
+    for (y = 0; y < im->target_height; y++) {
+      for (x = 0; x < im->target_width; x++)  {
+        ptr[x * 2]     = COL_BLUE(im->outbuf[i]);
+        ptr[x * 2 + 1] = COL_ALPHA(im->outbuf[i]);
+        i++;
+      }
+      png_write_row(png_ptr, (png_bytep)ptr);
+    }
+  }
+  else { // RGB  
+    for (y = 0; y < im->target_height; y++) {
+      for (x = 0; x < im->target_width; x++)  {
+        ptr[x * 4]     = COL_RED(im->outbuf[i]);
+        ptr[x * 4 + 1] = COL_GREEN(im->outbuf[i]);
+        ptr[x * 4 + 2] = COL_BLUE(im->outbuf[i]);
+        ptr[x * 4 + 3] = COL_ALPHA(im->outbuf[i]);
+        i++;
+      }
+      png_write_row(png_ptr, (png_bytep)ptr);
+    }
+  }
 	
   Safefree(ptr);
   

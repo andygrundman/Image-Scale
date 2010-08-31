@@ -392,7 +392,7 @@ image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
 {
   JSAMPROW row_pointer[1];
   int row_stride;
-  unsigned char *data = NULL;
+  volatile unsigned char *data = NULL;
   int i, x;
   
   cinfo->image_width      = im->target_width;
@@ -421,7 +421,7 @@ image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
       data[x + x + x + 2] = COL_BLUE( im->outbuf[i]);
       i++;
     }
-    row_pointer[0] = data;
+    row_pointer[0] = (unsigned char *)data;
     jpeg_write_scanlines(cinfo, row_pointer, 1);
   }
   
