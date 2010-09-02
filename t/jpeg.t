@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 196;
+use Test::More tests => 199;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -216,6 +216,23 @@ for my $resize ( @resizes ) {
     $im->save_jpeg($outfile);
     
     is( _compare( _load($outfile), "rgb_resize_gd_fixed_point_w100.jpg" ), 1, "JPEG resize_gd_fixed_point multiple from scalar ok" );
+}
+
+# offset image in MP3 ID3v2 tag
+{
+    my $outfile = _tmp("apic_gd_fixed_point_w50.jpg");
+    my $im = Image::Scale->new(
+        _f('v2.4-apic-jpg-351-2103.mp3'),
+        { offset => 351, length => 2103 }
+    );
+    
+    is( $im->width, 192, 'JPEG from offset ID3 tag width ok' );
+    is( $im->height, 256, 'JPEG from offset ID3 tag height ok' );
+    
+    $im->resize_gd_fixed_point( { width => 50 } );
+    $im->save_jpeg($outfile);
+    
+    is( _compare( _load($outfile), "apic_gd_fixed_point_w50.jpg" ), 1, "JPEG resize_gd_fixed_point from offset ID3 tag ok" );
 }
 
 # XXX fatal errors during compression, will this ever actually happen?
