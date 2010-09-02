@@ -14,9 +14,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define JPEG_BUFFER_SIZE 4096
-#define LE               0     // Exif byte orders
-#define BE               1
+#define LE 0     // Exif byte orders
+#define BE 1
 
 // Unfortunately we need a global variable in order to display the filename
 // during libjpeg output messages
@@ -30,67 +29,113 @@ struct sv_dst_mgr {
   JOCTET *off;
 };
 
-// Source manager to read JPEG from an SV
+typedef struct buf_src_mgr {
+  struct jpeg_source_mgr jsrc;
+  image *im;
+} buf_src_mgr;
+
+// Source manager to read JPEG from buffer
 static void
-sv_src_mgr_init(j_decompress_ptr cinfo)
+buf_src_init(j_decompress_ptr cinfo)
 {
   // Nothing
 }
 
 static boolean
-sv_src_mgr_fill_input_buffer(j_decompress_ptr cinfo)
+buf_src_fill_input_buffer(j_decompress_ptr cinfo)
 {
-  // All data must already be in the SV,
-  // so if this is called treat it as an error
   static JOCTET mybuffer[4];
+  buf_src_mgr *src = (buf_src_mgr *)cinfo->src;
+  image *im = src->im;
   
-  // Insert a fake EOI marker
+  DEBUG_TRACE("JPEG fill_input_buffer\n");
+  
+  // Consume the entire buffer, even if bytes are still in bytes_in_buffer
+  buffer_consume(im->buf, buffer_len(im->buf));
+  
+  if (im->fh != NULL) {
+    if ( !_check_buf(im->fh, im->buf, 1, BUFFER_SIZE) ) {
+      goto eof;
+    }
+  }
+  else {
+    // XXX read from SV into buffer
+  }
+  
+  cinfo->src->next_input_byte = (JOCTET *)buffer_ptr(im->buf);
+  cinfo->src->bytes_in_buffer = buffer_len(im->buf);;
+  
+  goto ok;
+  
+eof:
+  // Insert a fake EOI marker if we can't read enough data
+  DEBUG_TRACE("  EOF, returning EOI marker\n");
+
   mybuffer[0] = (JOCTET) 0xFF;
   mybuffer[1] = (JOCTET) JPEG_EOI;
   
   cinfo->src->next_input_byte = mybuffer;
   cinfo->src->bytes_in_buffer = 2;
-  
+
+ok:
   return TRUE;
 }
 
 static void
-sv_src_mgr_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
+buf_src_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
 {
+  buf_src_mgr *src = (buf_src_mgr *)cinfo->src;
+  image *im = src->im;
+  
   if (num_bytes > 0) {
-    while (num_bytes > (long)cinfo->src->bytes_in_buffer) {
+    DEBUG_TRACE("JPEG skip requested: %ld bytes\n", num_bytes);
+
+    while (num_bytes > cinfo->src->bytes_in_buffer) {
       num_bytes -= (long)cinfo->src->bytes_in_buffer;
+
+      // fill_input_buffer will discard the data in the current buffer
       (void) (*cinfo->src->fill_input_buffer)(cinfo);
     }
     
-    cinfo->src->next_input_byte += (size_t)num_bytes;
-    cinfo->src->bytes_in_buffer -= (size_t)num_bytes;
+    // Discard the remaining bytes, taking into account the amount libjpeg has already read
+    DEBUG_TRACE("  JPEG buffer consume %ld bytes\n", (buffer_len(im->buf) - cinfo->src->bytes_in_buffer) + num_bytes);
+    buffer_consume(im->buf, (buffer_len(im->buf) - cinfo->src->bytes_in_buffer) + num_bytes);
+    
+    cinfo->src->next_input_byte = (JOCTET *)buffer_ptr(im->buf);
+    cinfo->src->bytes_in_buffer = buffer_len(im->buf);
   }
 }
 
 static void
-sv_src_mgr_term_source(j_decompress_ptr cinfo)
+buf_src_term_source(j_decompress_ptr cinfo)
 {
   // Nothing
 }
 
 static void
-image_jpeg_sv_src(j_decompress_ptr cinfo, unsigned char *buf, long size)
+image_jpeg_buf_src(image *im)
 {
+  j_decompress_ptr cinfo = (j_decompress_ptr)im->cinfo;
+  buf_src_mgr *src;
+  
   if (cinfo->src == NULL) {
     cinfo->src = (struct jpeg_source_mgr *)
-      (*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT, sizeof(struct jpeg_source_mgr));
+      (*cinfo->mem->alloc_small)((j_common_ptr)cinfo, JPOOL_PERMANENT, sizeof(struct buf_src_mgr));
   }
   
-  cinfo->src->init_source       = sv_src_mgr_init;
-  cinfo->src->fill_input_buffer = sv_src_mgr_fill_input_buffer;
-  cinfo->src->skip_input_data   = sv_src_mgr_skip_input_data;
-  cinfo->src->resync_to_restart = jpeg_resync_to_restart; // use default
-  cinfo->src->term_source       = sv_src_mgr_term_source;
-  cinfo->src->bytes_in_buffer   = (size_t)size;
-  cinfo->src->next_input_byte   = (JOCTET *)buf;
+  src = (buf_src_mgr *)cinfo->src;
   
-  DEBUG_TRACE("Init SV JPEG src, %ld bytes\n", size);
+  src->im = im;
+  
+  src->jsrc.init_source       = buf_src_init;
+  src->jsrc.fill_input_buffer = buf_src_fill_input_buffer;
+  src->jsrc.skip_input_data   = buf_src_skip_input_data;
+  src->jsrc.resync_to_restart = jpeg_resync_to_restart; // use default
+  src->jsrc.term_source       = buf_src_term_source;
+  src->jsrc.bytes_in_buffer   = buffer_len(im->buf);
+  src->jsrc.next_input_byte   = (JOCTET *)buffer_ptr(im->buf);
+  
+  DEBUG_TRACE("Init JPEG buffer src, %d bytes in buffer\n", buffer_len(im->buf));
 }
 
 // Destination manager to copy compressed data to an SV
@@ -99,11 +144,11 @@ sv_dst_mgr_init(j_compress_ptr cinfo)
 {
   struct sv_dst_mgr *dst = (void *)cinfo->dest;
   
-  New(0, dst->buf, JPEG_BUFFER_SIZE, JOCTET);
+  New(0, dst->buf, BUFFER_SIZE, JOCTET);
   
   dst->off = dst->buf;
   dst->jdst.next_output_byte = dst->off;
-  dst->jdst.free_in_buffer = JPEG_BUFFER_SIZE;
+  dst->jdst.free_in_buffer = BUFFER_SIZE;
 }
 
 static boolean
@@ -112,14 +157,14 @@ sv_dst_mgr_empty(j_compress_ptr cinfo)
   struct sv_dst_mgr *dst = (void *)cinfo->dest;
   
   // Copy buffer to SV
-  sv_catpvn(dst->sv_buf, (char *)dst->buf, JPEG_BUFFER_SIZE);
+  sv_catpvn(dst->sv_buf, (char *)dst->buf, BUFFER_SIZE);
 
   // Reuse the buffer for the next chunk
   dst->off = dst->buf;
   dst->jdst.next_output_byte = dst->off;
-  dst->jdst.free_in_buffer = JPEG_BUFFER_SIZE;
+  dst->jdst.free_in_buffer = BUFFER_SIZE;
   
-  DEBUG_TRACE("sv_dst_mgr_empty, copied %d bytes\n", JPEG_BUFFER_SIZE);
+  DEBUG_TRACE("sv_dst_mgr_empty, copied %d bytes\n", BUFFER_SIZE);
   
   return TRUE;
 }
@@ -129,7 +174,7 @@ sv_dst_mgr_term(j_compress_ptr cinfo)
 {
   struct sv_dst_mgr *dst = (void *)cinfo->dest;
 
-  size_t sz = JPEG_BUFFER_SIZE - dst->jdst.free_in_buffer;
+  size_t sz = BUFFER_SIZE - dst->jdst.free_in_buffer;
   
   if (sz > 0) {
     // Copy buffer to SV
@@ -206,17 +251,8 @@ libjpeg_output_message(j_common_ptr cinfo)
 }
 
 int
-image_jpeg_read_header(image *im, const char *file)
-{
-  if (file != NULL) {
-    if ( (im->stdio_fp = fopen(file, "rb")) == NULL ) {
-      croak("Image::Scale could not open %s for reading", file);
-    }
-  }
-  else {
-    im->stdio_fp = NULL;
-  }
-  
+image_jpeg_read_header(image *im)
+{  
   Newz(0, im->cinfo, sizeof(struct jpeg_decompress_struct), struct jpeg_decompress_struct);
   im->memory_used += sizeof(struct jpeg_decompress_struct);
   
@@ -238,14 +274,8 @@ image_jpeg_read_header(image *im, const char *file)
   
   jpeg_create_decompress(im->cinfo);
   
-  if (file != NULL) {
-    // Reading from file
-    jpeg_stdio_src(im->cinfo, im->stdio_fp);
-  }
-  else {
-    // Reading from SV
-    image_jpeg_sv_src(im->cinfo, (unsigned char *)SvPVX(im->sv_data), sv_len(im->sv_data));
-  }
+  // Init custom source manager to read from existing buffer
+  image_jpeg_buf_src(im);
   
   // Save APP1 marker for EXIF, only need the first 1024 bytes
   jpeg_save_markers(im->cinfo, 0xE1, 1024);
@@ -301,14 +331,14 @@ image_jpeg_load(image *im)
   if (im->used) {
     DEBUG_TRACE("Reusing JPEG object, re-reading header\n");
     
-    if (im->stdio_fp != NULL) {
-      fseek(im->stdio_fp, 0, SEEK_SET);
+    if (im->fh != NULL) {
+      PerlIO_seek(im->fh, 0, SEEK_SET);
     }
     else {
-      // reset SV read
-      im->cinfo->src->bytes_in_buffer = (size_t)sv_len(im->sv_data);
-      im->cinfo->src->next_input_byte = (JOCTET *)SvPVX(im->sv_data);
+      // XXX reset SV read
     }
+    
+    buffer_clear(im->buf);
     
     jpeg_read_header(im->cinfo, TRUE);
   }
@@ -485,11 +515,5 @@ image_jpeg_finish(image *im)
     
     Safefree(im->jpeg_error_pub);
     im->jpeg_error_pub = NULL;
-  }
-  
-  if (im->stdio_fp != NULL) {
-    fclose(im->stdio_fp);
-    im->stdio_fp = NULL;
-    DEBUG_TRACE("Closed JPEG input file\n");
   }
 }

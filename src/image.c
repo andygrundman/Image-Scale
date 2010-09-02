@@ -66,6 +66,8 @@ image_init(HV *self, image *im)
   im->type             = UNKNOWN;
   im->stdio_fp         = NULL;
   im->sv_offset        = 0;
+  im->image_offset     = 0;
+  im->image_length     = 0;
   im->width            = 0;
   im->height           = 0;
   im->width_padding    = 0;
@@ -97,21 +99,31 @@ image_init(HV *self, image *im)
 #ifdef HAVE_GIF
   im->gif              = NULL;
 #endif
+
+  // Read new() options
+  if (my_hv_exists(self, "offset")) {
+    im->image_offset = SvIV(*(my_hv_fetch(self, "offset")));
+    if (im->fh != NULL)
+      PerlIO_seek(im->fh, im->image_offset, SEEK_SET);
+  }
+  
+  if (my_hv_exists(self, "length"))
+    im->image_length = SvIV(*(my_hv_fetch(self, "length")));
   
   Newz(0, im->buf, sizeof(Buffer), Buffer);
-  buffer_init(im->buf, 1024);
-  im->memory_used = 1024;
+  buffer_init(im->buf, BUFFER_SIZE);
+  im->memory_used = BUFFER_SIZE;
   
   // Determine type of file from magic bytes
   if (im->fh != NULL) {
-    if ( !_check_buf(im->fh, im->buf, 8, 1024) ) {
+    if ( !_check_buf(im->fh, im->buf, 8, BUFFER_SIZE) ) {
       image_finish(im);
       croak("Unable to read image header for %s", file);
     }
   }
   else {
-    im->sv_offset = MIN(sv_len(im->sv_data), 1024);
-    buffer_append(im->buf, SvPVX(im->sv_data), im->sv_offset);
+    im->sv_offset = MIN(sv_len(im->sv_data) - im->image_offset, BUFFER_SIZE);
+    buffer_append(im->buf, SvPVX(im->sv_data) + im->image_offset, im->sv_offset);
   }
   
   bptr = buffer_ptr(im->buf);
@@ -162,7 +174,7 @@ image_init(HV *self, image *im)
   switch (im->type) {
 #ifdef HAVE_JPEG
     case JPEG:
-      if ( !image_jpeg_read_header(im, file) ) {
+      if ( !image_jpeg_read_header(im) ) {
         ret = 0;
         goto out;
       }

@@ -89,6 +89,12 @@ Image::Scale - Fast, high-quality fixed-point image resizing
     my $img = Image::Scale->new('image.jpg') || die "Invalid JPEG file";
     $img->resize_gd( { width => 150 } );
     $img->save_jpeg('resized.jpg');
+    
+    # Easily resize artwork embedded within an audio file
+    # You can use L<Audio::Scan> to obtain offset/length information
+    my $img = Image::Scale->new( 'track.mp3', { offset => 2200, length => 34123 } );
+    $img->resize_gd_fixed_point( { width => 75, height => 75, keep_aspect => 1 } );
+    my $data = $img->as_png();
 
 =head1 DESCRIPTION
 
@@ -118,7 +124,7 @@ of floating-point vs. fixed is essentially identical.
 
 =head1 METHODS
 
-=head2 new( $PATH or \$DATA )
+=head2 new( $PATH or \$DATA, [ \%OPTIONS ] )
 
 Initialize a new Image::Scale object from PATH, which may be any valid JPEG,
 GIF, PNG, or BMP file.
@@ -128,6 +134,14 @@ is recommended when possible as this is more efficient and requires less memory.
 
 new() reads the image header, and will return undef if the header is invalid,
 so be sure to check for this.
+
+Optionally you can also pass in additional options in a hashref:
+
+    offset
+    length
+
+To access an image embedded within another file, such as an audio file, you can
+specify a byte offset and length.
 
 =head2 width()
 

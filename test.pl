@@ -10,15 +10,16 @@ use Image::Scale;
 
 my $path = shift;
 my $height = shift;
+my $offset = shift || 0;
+my $length = shift || 0;
 
 my $count = 0;
 
 # From file
-if (0) {
-    my $img = Image::Scale->new($path);
+if (1) {
+    my $img = Image::Scale->new($path, { offset => $offset, length => $length } );
     
     #$img->resize_gd( { height => $height, width => $height, keep_aspect => 1 } );
-    $img->resize_gd_fixed_point( { height => $height } );
     $img->resize_gd_fixed_point( { height => $height } );
     #$img->resize_gm( { height => $height, width => $height, keep_aspect => 1 } );
     #$img->resize_gm_fixed_point( { height => $height, width => $height, keep_aspect => 1 } );
@@ -37,12 +38,11 @@ if (0) {
 }
 
 # From data
-if (1) {
+if (0) {
     my $data = read_file($path);
     
     my $img = Image::Scale->new(\$data);
     
-    $img->resize_gd_fixed_point( { height => $height } );
     $img->resize_gd_fixed_point( { height => $height } );
     
     $img->save_png('resized.png');

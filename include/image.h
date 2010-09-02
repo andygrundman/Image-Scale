@@ -21,6 +21,8 @@
 #include <gif_lib.h>
 #endif
 
+#define BUFFER_SIZE 4096
+
 #define DEFAULT_JPEG_QUALITY 90
 
 #define COL(red, green, blue) (((red) << 24) | ((green) << 16) | ((blue) << 8) | 0xFF)
@@ -85,6 +87,8 @@ typedef struct {
   FILE    *stdio_fp;
   SV      *sv_data;
   int32_t sv_offset;
+  int32_t image_offset;
+  int32_t image_length;
   int32_t type;
   int32_t width;
   int32_t height;
@@ -158,7 +162,7 @@ void image_finish(image *im);
 inline void image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy);
 
 #ifdef HAVE_JPEG
-int image_jpeg_read_header(image *im, const char *file);
+int image_jpeg_read_header(image *im);
 int image_jpeg_load(image *im);
 void image_jpeg_save(image *im, const char *path, int quality);
 void image_jpeg_to_sv(image *im, int quality, SV *sv_buf);
