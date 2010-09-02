@@ -59,11 +59,16 @@ buf_src_fill_input_buffer(j_decompress_ptr cinfo)
     }
   }
   else {
-    // XXX read from SV into buffer
+    // read from SV into buffer
+    int sv_readlen = MIN(sv_len(im->sv_data), BUFFER_SIZE);
+    
+    DEBUG_TRACE("  Reading %d bytes of SV data @ %d\n", sv_readlen, im->sv_offset);    
+    buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, sv_readlen);
+    im->sv_offset += sv_readlen;
   }
   
   cinfo->src->next_input_byte = (JOCTET *)buffer_ptr(im->buf);
-  cinfo->src->bytes_in_buffer = buffer_len(im->buf);;
+  cinfo->src->bytes_in_buffer = buffer_len(im->buf);
   
   goto ok;
   
@@ -332,13 +337,17 @@ image_jpeg_load(image *im)
     DEBUG_TRACE("Reusing JPEG object, re-reading header\n");
     
     if (im->fh != NULL) {
-      PerlIO_seek(im->fh, 0, SEEK_SET);
+      // reset file to begining of image
+      PerlIO_seek(im->fh, im->image_offset, SEEK_SET);
     }
     else {
-      // XXX reset SV read
+      // reset SV read
+      im->sv_offset = im->image_offset;
     }
     
     buffer_clear(im->buf);
+    
+    im->cinfo->src->bytes_in_buffer = 0;
     
     jpeg_read_header(im->cinfo, TRUE);
   }

@@ -51,7 +51,8 @@ _check_buf(PerlIO *infile, Buffer *buf, int min_wanted, int max_wanted)
         warn("Error reading: %s (wanted %d)\n", strerror(errno), actual_wanted);
       }
       else {
-        warn("Error: Unable to read at least %d bytes from file.\n", min_wanted);
+        // Avoid printing this warning, let image format routines handle warnings and errors
+        //warn("Error: Unable to read at least %d bytes from file.\n", min_wanted);
       }
 
       ret = 0;

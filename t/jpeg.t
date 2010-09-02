@@ -106,7 +106,7 @@ for my $resize ( @resizes ) {
     $im->save_jpeg($outfile);
     
     # Test that the correct warning was output
-    like( (Test::NoWarnings::warnings())[0]->getMessage, qr/Image::Scale libjpeg error: Premature end of JPEG file/, 'JPEG corrupt truncated warning output ok' );
+    like( (Test::NoWarnings::warnings())[0]->getMessage, qr/premature end of/i, 'JPEG corrupt truncated warning output ok' );
     
     is( _compare( _load($outfile), "truncated_50.jpg" ), 1, 'JPEG corrupt truncated resize_gd ok' );
 }
