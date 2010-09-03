@@ -60,7 +60,7 @@ buf_src_fill_input_buffer(j_decompress_ptr cinfo)
   }
   else {
     // read from SV into buffer
-    int sv_readlen = MIN(sv_len(im->sv_data), BUFFER_SIZE);
+    int sv_readlen = MIN(sv_len(im->sv_data) - im->sv_offset, BUFFER_SIZE);
     
     DEBUG_TRACE("  Reading %d bytes of SV data @ %d\n", sv_readlen, im->sv_offset);    
     buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, sv_readlen);

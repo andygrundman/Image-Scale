@@ -84,7 +84,6 @@ typedef struct {
   Buffer  *buf;
   SV      *path;
   PerlIO  *fh;
-  FILE    *stdio_fp;
   SV      *sv_data;
   int32_t sv_offset;
   int32_t image_offset;
@@ -178,7 +177,7 @@ void image_gif_load(image *im);
 #endif
 
 #ifdef HAVE_PNG
-int image_png_read_header(image *im, const char *file);
+int image_png_read_header(image *im);
 int image_png_load(image *im);
 void image_png_save(image *im, const char *path);
 void image_png_to_sv(image *im, SV *sv_buf);

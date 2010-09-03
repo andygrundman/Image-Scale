@@ -15,14 +15,41 @@
  */
 
 static void
-image_png_read_sv(png_structp png_ptr, png_bytep data, png_size_t len)
+image_png_read_buf(png_structp png_ptr, png_bytep data, png_size_t len)
 {
  image *im = (image *)png_get_io_ptr(png_ptr);
 
- png_memcpy(data, SvPVX(im->sv_data) + im->sv_offset, len);
- im->sv_offset += len;
+ DEBUG_TRACE("PNG read_buf wants %ld bytes, %d in buffer\n", len, buffer_len(im->buf));
+ 
+ if (im->fh != NULL) {
+   if ( !_check_buf(im->fh, im->buf, len, MAX(len, BUFFER_SIZE)) ) {
+     goto eof;
+   }
+ }
+ else {
+   if (len > buffer_len(im->buf)) {
+     // read from SV into buffer
+     int sv_readlen = len - buffer_len(im->buf);
+   
+     if (sv_readlen > sv_len(im->sv_data) - im->sv_offset)
+       goto eof;
+   
+     DEBUG_TRACE("  Reading %d bytes of SV data @ %d\n", sv_readlen, im->sv_offset);    
+     buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, sv_readlen);
+     im->sv_offset += sv_readlen;
+    }
+ }
 
- DEBUG_TRACE("image_png_read_sv read %ld bytes @ offset %ld\n", len, im->sv_offset - len);
+ png_memcpy(data, buffer_ptr(im->buf), len);
+ buffer_consume(im->buf, len);
+ 
+ goto ok;
+ 
+eof:
+  png_error(png_ptr, "Not enough PNG data");
+ 
+ok:
+  return;
 }
 
 static void
@@ -44,7 +71,7 @@ image_png_warning(png_structp png_ptr, png_const_charp warning_msg)
 }
 
 int
-image_png_read_header(image *im, const char *file)
+image_png_read_header(image *im)
 {
   im->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, (png_voidp)im, image_png_error, image_png_warning);
   if ( !im->png_ptr )
@@ -61,19 +88,7 @@ image_png_read_header(image *im, const char *file)
     return 0;
   }
   
-  if (file != NULL) {
-    // Reading from file
-    if ( (im->stdio_fp = fopen(file, "rb")) == NULL ) {
-  		croak("Image::Scale could not open %s for reading", file);
-  	}
-    png_init_io(im->png_ptr, im->stdio_fp);
-	}
-	else {
-	  // Reading from SV
-    im->stdio_fp = NULL;
-    im->sv_offset = 0;
-    png_set_read_fn(im->png_ptr, im, image_png_read_sv);
-  }
+  png_set_read_fn(im->png_ptr, im, image_png_read_buf);
   
   png_read_info(im->png_ptr, im->info_ptr);
   
@@ -140,14 +155,20 @@ image_png_load(image *im)
   // If reusing the object a second time, we need to completely create a new png struct
   if (im->used) {
     DEBUG_TRACE("Recreating libpng objects\n");
-    if (im->stdio_fp != NULL) {
-      image_png_finish(im);
-      image_png_read_header(im, SvPVX(im->path));
+    image_png_finish(im);
+    
+    if (im->fh != NULL) {
+      // reset file to begining of image
+      PerlIO_seek(im->fh, im->image_offset, SEEK_SET);
     }
     else {
-      image_png_finish(im);
-      image_png_read_header(im, NULL);
+      // reset SV read
+      im->sv_offset = im->image_offset;
     }
+    
+    buffer_clear(im->buf);
+    
+    image_png_read_header(im);
   }
   
   bit_depth  = png_get_bit_depth(im->png_ptr, im->info_ptr);
@@ -404,11 +425,5 @@ image_png_finish(image *im)
     png_destroy_read_struct(&im->png_ptr, &im->info_ptr, NULL);
     im->png_ptr = NULL;
     DEBUG_TRACE("libpng destroy\n");
-  }
-  
-  if (im->stdio_fp != NULL) {
-    fclose(im->stdio_fp);
-    im->stdio_fp = NULL;
-    DEBUG_TRACE("Closed PNG input file\n");
   }
 }

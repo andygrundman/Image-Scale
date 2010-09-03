@@ -64,7 +64,6 @@ image_init(HV *self, image *im)
   im->outbuf           = NULL;
   im->outbuf_size      = 0;
   im->type             = UNKNOWN;
-  im->stdio_fp         = NULL;
   im->sv_offset        = 0;
   im->image_offset     = 0;
   im->image_length     = 0;
@@ -182,7 +181,7 @@ image_init(HV *self, image *im)
 #endif
 #ifdef HAVE_PNG
     case PNG:
-      if ( !image_png_read_header(im, file) ) {
+      if ( !image_png_read_header(im) ) {
         ret = 0;
         goto out;
       }
