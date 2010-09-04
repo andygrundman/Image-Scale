@@ -267,12 +267,3 @@ sub _compare {
     
     return $$ref eq $$test;
 }
-
-sub _out {
-    my $ref = shift;
-    
-    open my $fh, '>', 'out.jpg';
-    binmode $fh;
-    print $fh $$ref;
-    close $fh;
-}

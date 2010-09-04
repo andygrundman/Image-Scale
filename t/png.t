@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 44;
+use Test::More tests => 47;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -124,8 +124,25 @@ for my $resize ( @resizes ) {
     is( _compare( _load($outfile), "rgba_resize_gd_fixed_point_w100.png" ), 1, "PNG resize_gd_fixed_point multiple from scalar ok" );
 }
 
+# offset image in MP3 ID3v2 tag
+{
+    my $outfile = _tmp("apic_gd_fixed_point_w50.png");
+    my $im = Image::Scale->new(
+        _f('v2.4-apic-png-350-58618.mp3'),
+        { offset => 350, length => 58618 }
+    );
+    
+    is( $im->width, 320, 'PNG from offset ID3 tag width ok' );
+    is( $im->height, 240, 'PNG from offset ID3 tag height ok' );
+    
+    $im->resize_gd_fixed_point( { width => 50 } );
+    $im->save_png($outfile);
+    
+    is( _compare( _load($outfile), "apic_gd_fixed_point_w50.png" ), 1, "PNG resize_gd_fixed_point from offset ID3 tag ok" );
+}
+
 END {
-    #File::Path::rmtree($tmpdir);
+    File::Path::rmtree($tmpdir);
 }
 
 sub _f {    
@@ -153,13 +170,4 @@ sub _compare {
     my $ref = _load( catfile( $FindBin::Bin, 'ref', 'png', $path ) );
     
     return $$ref eq $$test;
-}
-
-sub _out {
-    my $ref = shift;
-    
-    open my $fh, '>', 'out.png';
-    binmode $fh;
-    print $fh $$ref;
-    close $fh;
 }
