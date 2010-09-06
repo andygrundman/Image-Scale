@@ -81,6 +81,10 @@ enum orientation {
 };
 
 typedef struct {
+  int32_t colors[256];
+} palette;
+
+typedef struct {
   Buffer  *buf;
   SV      *path;
   PerlIO  *fh;
@@ -97,6 +101,7 @@ typedef struct {
   int32_t height_inner;
   int32_t flipped;
   int32_t bpp;
+  int32_t compression;
   int32_t channels;
   int32_t has_alpha;
   int32_t orientation;
@@ -107,6 +112,7 @@ typedef struct {
   pix     *pixbuf; // Source image
   pix     *outbuf; // Resized image
   pix     *tmpbuf; // Temporary intermediate image
+  palette *palette;
   
   // Resize options
   int32_t memory_limit;
@@ -168,8 +174,9 @@ void image_jpeg_to_sv(image *im, int quality, SV *sv_buf);
 void image_jpeg_finish(image *im);
 #endif
 
-void image_bmp_read_header(image *im, const char *file);
-void image_bmp_load(image *im);
+int image_bmp_read_header(image *im);
+int image_bmp_load(image *im);
+void image_bmp_finish(image *im);
 
 #ifdef HAVE_GIF
 void image_gif_read_header(image *im, const char *file);

@@ -13,12 +13,26 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+ 
+// Compression methods
+enum {
+  BI_RGB = 0,
+  BI_RLE8,
+  BI_RLE4,
+  BI_BITFIELDS,
+  BI_JPEG,
+  BI_PNG,
+};
 
-void
-image_bmp_read_header(image *im, const char *file)
+// 16-bit color masks and shifts, default is 5-5-5
+static uint32_t masks[3]  = { 0x7c00, 0x3e0, 0x1f };
+static uint32_t shifts[3] = { 10, 5, 0 };
+static uint32_t ncolors[3] = { (1 << 5) - 1, (1 << 5) - 1, (1 << 5) - 1 };
+
+int
+image_bmp_read_header(image *im)
 {
-  int offset;
-  int compression;
+  int offset, palette_colors;
   
   buffer_consume(im->buf, 10);
   
@@ -28,36 +42,121 @@ image_bmp_read_header(image *im, const char *file)
   im->height = buffer_get_int_le(im->buf);  
   buffer_consume(im->buf, 2);
   im->bpp = buffer_get_short_le(im->buf);
-  compression = buffer_get_int_le(im->buf);
+  im->compression = buffer_get_int_le(im->buf);
   
-  if (im->bpp < 24) { // XXX
-    croak("Image::Scale unsupported BMP bit depth: %d\n", im->bpp);
-  }
+  DEBUG_TRACE("BMP offset %d, width %d, height %d, bpp %d, compression %d\n",
+    offset, im->width, im->height, im->bpp, im->compression);
   
-  if (compression != 0) { // XXX
-    croak("Image::Scale unsupported BMP compression type: %d\n", compression);
+  if (im->compression > 3) { // JPEG/PNG
+    warn("Image::Scale unsupported BMP compression type: %d (%s)\n", im->compression, SvPVX(im->path));
+    return 0;
   }
   
   // Negative height indicates a flipped image
   if (im->height < 0) {
+    croak("flipped\n");
     im->flipped = 1;
     im->height = abs(im->height);
   }
   
-  im->channels = im->bpp / 8;
+  // Not used during reading, but lets output PNG be correct
+  im->channels = 4;
   
-  // Skip to the start of the image data
-  buffer_consume(im->buf, offset - 34);
+  // Skip BMP size, resolution
+  buffer_consume(im->buf, 12);
+  
+  palette_colors = buffer_get_int_le(im->buf);
+  
+  // Skip number of important colors
+  buffer_consume(im->buf, 4);
+  
+  // < 16-bit always has a palette
+  if (!palette_colors && im->bpp < 16) {
+    switch (im->bpp) {
+      case 8:
+        palette_colors = 256;
+        break;
+      case 4:
+        palette_colors = 16;
+        break;
+      case 1:
+        palette_colors = 2;
+        break;
+    }
+  }
+  
+  DEBUG_TRACE("palette_colors %d\n", palette_colors);
+  if (palette_colors) {
+    // Read palette
+    int i;
+    
+    if (palette_colors > 256) {
+      warn("Image::Scale cannot read BMP with palette > 256 colors (%s)\n", SvPVX(im->path));
+      return 0;
+    }
+    
+    New(0, im->palette, 1, palette);
+    
+    for (i = 0; i < palette_colors; i++) {
+      int b = buffer_get_char(im->buf);
+      int g = buffer_get_char(im->buf);
+      int r = buffer_get_char(im->buf);
+      buffer_consume(im->buf, 1);
+      
+      im->palette->colors[i] = COL(r, g, b);
+      DEBUG_TRACE("palette %d = %08x\n", i, im->palette->colors[i]);
+    }
+  }
+  else if (im->bpp == 16) {
+    if (im->compression == BI_BITFIELDS) {
+      int pos, bit, i;
+      
+      // Read 16-bit bitfield masks
+      for (i = 0; i < 3; i++) {
+        masks[i] = buffer_get_int_le(im->buf);
+        
+        // Determine shift value
+        pos = 0;
+        bit = masks[i] & -masks[i];
+        while (bit) {
+          pos++;
+          bit >>= 1;
+        }
+        shifts[i] = pos - 1;
+        
+        // green can be 6 bits
+        if (i == 1 && masks[1] == 0x7e0)
+          ncolors[i] = (1 << 6) - 1;
+        
+        DEBUG_TRACE("16bpp mask %d: %08x >> %d, ncolors %d\n", i, masks[i], shifts[i], ncolors[i]);
+      }
+    }
+  }
+  
+  // XXX make sure to skip to offset
+  
+  return 1;
 }
 
-void
+int
 image_bmp_load(image *im)
 {
   int offset = 0;
-  int padding = 0;
+  int paddingbits = 0;
+  int mask = 0;
   int i, x, y, blen;
-  int starty, lasty, incy;
+  int starty, lasty, incy, linebytes;
   unsigned char *bptr;
+  
+  // Calculate bits of padding per line
+  paddingbits = 32 - (im->width * im->bpp) % 32;
+  if (paddingbits == 32)
+    paddingbits = 0;
+  
+  // Bytes per line
+  linebytes = ((im->width * im->bpp) + paddingbits) / 8;
+  
+  DEBUG_TRACE("linebits %d, paddingbits %d, linebytes %d\n", im->width * im->bpp, paddingbits, linebytes);
   
   bptr = buffer_ptr(im->buf);
   blen = buffer_len(im->buf);
@@ -78,20 +177,26 @@ image_bmp_load(image *im)
   
   y = starty;
   
-  if ((im->width * im->channels) & 3) {
-    padding = (im->width * im->channels) % 4;
-  }
+  if (im->bpp == 1)
+    mask = 0x80;
+  else if (im->bpp == 4)
+    mask = 0xF0;
   
   while (y != lasty) {
     for (x = 0; x < im->width; x++) {
-      if (blen < im->channels) {
+      if (blen <= 0 || blen < im->bpp / 8) {
         // Load more from the buffer
+        if (blen < 0)
+          blen = 0;
+        
         buffer_consume(im->buf, buffer_len(im->buf) - blen);
         
         if (im->fh != NULL) {
           // Read from file
           if ( !_check_buf(im->fh, im->buf, im->channels, 8192) ) {
-            croak("Image::Scale unable to read entire BMP file\n");
+            image_bmp_finish(im);
+            warn("Image::Scale unable to read entire BMP file (%s)\n", SvPVX(im->path));
+            return 0;
           }
         }
         else {
@@ -99,7 +204,9 @@ image_bmp_load(image *im)
           int svbuflen = MIN(sv_len(im->sv_data) - im->sv_offset, 8192);
           
           if (!svbuflen) {
-            croak("Image::Scale unable to read entire BMP file\n");
+            image_bmp_finish(im);
+            warn("Image::Scale unable to read entire BMP file (%s)\n", SvPVX(im->path));
+            return 0;
           }
           buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, svbuflen);
           im->sv_offset += svbuflen;
@@ -111,37 +218,122 @@ image_bmp_load(image *im)
       }
       
       i = x + (y * im->width);
-      if (im->channels == 4) {
-        // 32-bit BGRA
-        im->pixbuf[i] = COL_FULL(bptr[offset+2], bptr[offset+1], bptr[offset], bptr[offset+3]);
-      }
-      else {
-        // 24-bit BGR
-        im->pixbuf[i] = COL(bptr[offset+2], bptr[offset+1], bptr[offset]);
+      
+      switch (im->bpp) {
+        case 32: // XXX how to detect alpha channel?
+          //im->pixbuf[i] = COL_FULL(bptr[offset+2], bptr[offset+1], bptr[offset], bptr[offset+3]);
+          im->pixbuf[i] = COL(bptr[offset+2], bptr[offset+1], bptr[offset]);
+          offset += 4;
+          blen -= 4;
+          linebytes -= 4;     
+          break;
+
+        case 24: // 24-bit BGR
+          im->pixbuf[i] = COL(bptr[offset+2], bptr[offset+1], bptr[offset]);
+          offset += 3;
+          blen -= 3;
+          linebytes -= 3;
+          break;
+          
+        case 16:
+        {
+          int p = (bptr[offset+1] << 8) | bptr[offset];
+          DEBUG_TRACE("p %x (r %02x g %02x b %02x)\n", p,
+              ((p & masks[0]) >> shifts[0]) * 255 / ncolors[0],
+              ((p & masks[1]) >> shifts[1]) * 255 / ncolors[1],
+              ((p & masks[2]) >> shifts[2]) * 255 / ncolors[2]);
+                        
+          im->pixbuf[i] = COL(
+            ((p & masks[0]) >> shifts[0]) * 255 / ncolors[0],
+            ((p & masks[1]) >> shifts[1]) * 255 / ncolors[1],
+            ((p & masks[2]) >> shifts[2]) * 255 / ncolors[2]
+          );
+          
+          offset += 2;
+          blen -= 2;
+          linebytes -= 2;
+          break;
+        }
+        
+        case 8:
+          im->pixbuf[i] = im->palette->colors[ bptr[offset] ];
+          offset++;
+          blen--;
+          linebytes--;
+          break;
+          
+        case 4:
+          if (mask == 0xF0) {
+            im->pixbuf[i] = im->palette->colors[ (bptr[offset] & mask) >> 4 ];
+            mask = 0xF;
+          }
+          else {
+            im->pixbuf[i] = im->palette->colors[ (bptr[offset] & mask) ];
+            offset++;
+            blen--;
+            linebytes--;
+            mask = 0xF0;
+          }
+          break;
+        
+        case 1:
+          im->pixbuf[i] = im->palette->colors[ (bptr[offset] & mask) ? 1 : 0 ];
+          mask >>= 1;
+          if (!mask) {
+            offset++;
+            blen--;
+            linebytes--;
+            mask = 0x80;
+          }
+          break;
       }
       
-      //DEBUG_TRACE("x %d / y %d / i %d, offset %d, blen %d, pix %x\n", x, y, i, offset, blen, im->pixbuf[i]);
-      
-      offset += im->channels;
-      blen -= im->channels;
+      DEBUG_TRACE("x %d / y %d, linebytes left %d, pix %08x\n", x, y, linebytes, im->pixbuf[i]);
     }
     
-    if (padding) {
-      if (blen < padding) {
+    if (linebytes) {
+      DEBUG_TRACE("Consuming %d bytes of padding\n", linebytes);
+      
+      if (blen < linebytes) {
         // Load more from the buffer
         buffer_consume(im->buf, buffer_len(im->buf) - blen);
         if ( !_check_buf(im->fh, im->buf, im->channels, 8192) ) {
-          croak("Image::Scale unable to read entire BMP file\n");
+          image_bmp_finish(im);
+          warn("Image::Scale unable to read entire BMP file (%s)\n", SvPVX(im->path));
+          return 0;
         }
         bptr = buffer_ptr(im->buf);
         blen = buffer_len(im->buf);
         offset = 0;
       }
-        
-      offset += padding;
-      blen -= padding;
+      
+      offset += linebytes;
+      blen -= linebytes;
+      
+      // Reset mask for next line
+      if (im->bpp == 4)
+        mask = 0xF0;
+      else if (im->bpp == 1)
+        mask = 0x80;
     }
     
+    linebytes = ((im->width * im->bpp) + paddingbits) / 8;
+    
     y += incy;
+  }
+  
+  // Set channels to 4 so we write a color PNG, unless bpp is 1
+  if (im->bpp > 1)
+    im->channels = 4;
+  
+  return 1;
+}
+
+void
+image_bmp_finish(image *im)
+{
+  if (im->palette != NULL) {
+    Safefree(im->palette);
+    im->palette = NULL;
   }
 }

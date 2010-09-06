@@ -87,6 +87,7 @@ image_init(HV *self, image *im)
   im->filter           = 0;
   im->bgcolor          = 0;
   im->used             = 0;
+  im->palette          = NULL;
   
 #ifdef HAVE_JPEG
   im->cinfo            = NULL;
@@ -193,7 +194,7 @@ image_init(HV *self, image *im)
       break;
 #endif
     case BMP:
-      image_bmp_read_header(im, file);
+      image_bmp_read_header(im);
       break;
     case UNKNOWN:
       warn("Image::Scale unknown file type (%s), first 8 bytes were: %02x %02x %02x %02x %02x %02x %02x %02x\n",
@@ -291,7 +292,10 @@ image_resize(image *im)
       break;
 #endif
     case BMP:
-      image_bmp_load(im);
+      if ( !image_bmp_load(im) ) {
+        ret = 0;
+        goto out;
+      }
       break;
   }
   
@@ -400,7 +404,7 @@ image_finish(image *im)
       break;
 #endif
     case BMP:
-      // Nothing
+      image_bmp_finish(im);
       break;
   }
   

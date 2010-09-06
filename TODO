@@ -14,6 +14,7 @@ Tests:
   Corrupt/invalid files in all formats, triggering longjmp's
   memory_limit
   PNG <8-bit gray
+  BMP 32-bit BI_BITFIELDS
 
 In buildme.sh static build script, could comment out optional libjpeg features to reduce library size:
   DCT_IFAST_SUPPORTED
