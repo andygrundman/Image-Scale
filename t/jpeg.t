@@ -237,6 +237,8 @@ for my $resize ( @resizes ) {
 
 # XXX fatal errors during compression, will this ever actually happen?
 
+# XXX progressive JPEG with/without memory_limit
+
 END {
     File::Path::rmtree($tmpdir);
 }

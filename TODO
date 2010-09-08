@@ -8,6 +8,7 @@ Display library versions during Makefile.PL
 Skip jpg/gif/png tests if library isn't supported
 BMP RLE support
 BMP OS/2 format support
+Image comparison tests fail with other library versions
 
 Tests:
   width/height all formats

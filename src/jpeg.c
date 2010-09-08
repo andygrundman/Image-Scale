@@ -282,6 +282,11 @@ image_jpeg_read_header(image *im)
   // Init custom source manager to read from existing buffer
   image_jpeg_buf_src(im);
   
+#ifdef AUDIO_SCAN_DEBUG
+  // Enable for libjpeg debug output
+  //im->cinfo->err->trace_level = 3;
+#endif
+  
   // Save APP1 marker for EXIF, only need the first 1024 bytes
   jpeg_save_markers(im->cinfo, 0xE1, 1024);
   
@@ -328,6 +333,15 @@ image_jpeg_load(image *im)
   unsigned char *line[1], *ptr;
   
   if (setjmp(setjmp_buffer)) {
+    image_jpeg_finish(im);
+    return 0;
+  }
+  
+  // Abort on progressive JPEGs if memory_limit is in use,
+  // as progressive JPEGs can use many MBs of memory and there
+  // is no other easy way to alter libjpeg's memory use
+  if (im->memory_limit && im->cinfo->progressive_mode) {
+    warn("Image::Scale will not decode progressive JPEGs when memory_limit is in use (%s)\n", SvPVX(im->path));
     image_jpeg_finish(im);
     return 0;
   }
