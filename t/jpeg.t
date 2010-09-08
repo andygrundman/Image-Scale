@@ -3,10 +3,19 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 201;
+use Test::More;
 require Test::NoWarnings;
 
 use Image::Scale;
+
+my $jpeg_version = Image::Scale->jpeg_version();
+
+if ($jpeg_version) {
+    plan tests => 201;
+}
+else {
+    plan skip_all => 'Image::Scale not built with libjpeg support';
+}
 
 my $tmpdir = catdir( $FindBin::Bin, 'tmp' );
 if ( -d $tmpdir ) {
@@ -37,56 +46,62 @@ for my $type ( @types ) {
     is( $im->height, 234, "JPEG $type height ok" );
 }
 
-# Normal width resize
-for my $resize ( @resizes ) {
-    for my $type ( @types ) {
-        my $outfile = _tmp("${type}_${resize}_w100.jpg");
+SKIP:
+{
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 88
+        if $jpeg_version != 62;
         
-        my $im = Image::Scale->new( _f("${type}.jpg") );
-        $im->$resize( { width => 100 } );
-        $im->save_jpeg($outfile);
-        my $data = $im->as_jpeg();
+    # Normal width resize
+    for my $resize ( @resizes ) {
+        for my $type ( @types ) {
+            my $outfile = _tmp("${type}_${resize}_w100.jpg");
+        
+            my $im = Image::Scale->new( _f("${type}.jpg") );
+            $im->$resize( { width => 100 } );
+            $im->save_jpeg($outfile);
+            my $data = $im->as_jpeg();
     
-        is( _compare( _load($outfile), "${type}_${resize}_w100.jpg" ), 1, "JPEG $type $resize 100 file ok" );
-        is( _compare( \$data, "${type}_${resize}_w100.jpg" ), 1, "JPEG $type $resize 100 scalar ok" );
+            is( _compare( _load($outfile), "${type}_${resize}_w100.jpg" ), 1, "JPEG $type $resize 100 file ok" );
+            is( _compare( \$data, "${type}_${resize}_w100.jpg" ), 1, "JPEG $type $resize 100 scalar ok" );
+        }
     }
-}
 
-# square, without keep_aspect
-for my $resize ( @resizes ) {
-    for my $type ( @types ) {
-        my $outfile = _tmp("${type}_${resize}_50x50.jpg");
+    # square, without keep_aspect
+    for my $resize ( @resizes ) {
+        for my $type ( @types ) {
+            my $outfile = _tmp("${type}_${resize}_50x50.jpg");
         
-        my $im = Image::Scale->new( _f("${type}.jpg") );
-        $im->$resize( { width => 50, height => 50 } );
-        $im->save_jpeg($outfile);
-        my $data = $im->as_jpeg();
+            my $im = Image::Scale->new( _f("${type}.jpg") );
+            $im->$resize( { width => 50, height => 50 } );
+            $im->save_jpeg($outfile);
+            my $data = $im->as_jpeg();
         
-        is( _compare( _load($outfile), "${type}_${resize}_50x50.jpg" ), 1, "JPEG $type $resize 50x50 square file ok" );
-        is( _compare( \$data, "${type}_${resize}_50x50.jpg" ), 1, "JPEG $type $resize 50x50 square scalar ok" );
+            is( _compare( _load($outfile), "${type}_${resize}_50x50.jpg" ), 1, "JPEG $type $resize 50x50 square file ok" );
+            is( _compare( \$data, "${type}_${resize}_50x50.jpg" ), 1, "JPEG $type $resize 50x50 square scalar ok" );
+        }
     }
-}
 
-# keep_aspect with height padding
-for my $resize ( @resizes ) {
-    my $outfile = _tmp("${resize}_50x50_keep_aspect_height.jpg");
+    # keep_aspect with height padding
+    for my $resize ( @resizes ) {
+        my $outfile = _tmp("${resize}_50x50_keep_aspect_height.jpg");
     
-    my $im = Image::Scale->new( _f("rgb.jpg") );
-    $im->$resize( { width => 50, height => 50, keep_aspect => 1 } );
-    $im->save_jpeg($outfile);
+        my $im = Image::Scale->new( _f("rgb.jpg") );
+        $im->$resize( { width => 50, height => 50, keep_aspect => 1 } );
+        $im->save_jpeg($outfile);
     
-    is( _compare( _load($outfile), "${resize}_50x50_keep_aspect_height.jpg" ), 1, "JPEG $resize 50x50 keep_aspect file ok" );
-}
+        is( _compare( _load($outfile), "${resize}_50x50_keep_aspect_height.jpg" ), 1, "JPEG $resize 50x50 keep_aspect file ok" );
+    }
 
-# keep_aspect with width padding
-for my $resize ( @resizes ) {
-    my $outfile = _tmp("${resize}_50x50_keep_aspect_width.jpg");
+    # keep_aspect with width padding
+    for my $resize ( @resizes ) {
+        my $outfile = _tmp("${resize}_50x50_keep_aspect_width.jpg");
     
-    my $im = Image::Scale->new( _f("exif_90_ccw.jpg") );
-    $im->$resize( { width => 50, height => 50, ignore_exif => 1, keep_aspect => 1 } );
-    $im->save_jpeg($outfile);
+        my $im = Image::Scale->new( _f("exif_90_ccw.jpg") );
+        $im->$resize( { width => 50, height => 50, ignore_exif => 1, keep_aspect => 1 } );
+        $im->save_jpeg($outfile);
     
-    is( _compare( _load($outfile), "${resize}_50x50_keep_aspect_width.jpg" ), 1, "JPEG $resize 50x50 keep_aspect file ok" );
+        is( _compare( _load($outfile), "${resize}_50x50_keep_aspect_width.jpg" ), 1, "JPEG $resize 50x50 keep_aspect file ok" );
+    }
 }
 
 # memory_limit
@@ -97,6 +112,7 @@ for my $resize ( @resizes ) {
 }
 
 # corrupt truncated file but will still resize with a gray area
+SKIP:
 {
     Test::NoWarnings::clear_warnings();
     
@@ -107,6 +123,9 @@ for my $resize ( @resizes ) {
     
     # Test that the correct warning was output
     like( (Test::NoWarnings::warnings())[0]->getMessage, qr/premature end of/i, 'JPEG corrupt truncated warning output ok' );
+    
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 1
+        if $jpeg_version != 62;
     
     is( _compare( _load($outfile), "truncated_50.jpg" ), 1, 'JPEG corrupt truncated resize_gd ok' );
 }
@@ -124,7 +143,11 @@ for my $resize ( @resizes ) {
 }
 
 # keep_aspect bgcolor
+SKIP:
 {
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 4
+        if $jpeg_version != 62;
+        
     for my $resize ( @resizes ) {
         my $outfile = _tmp("bgcolor_${resize}.jpg");
     
@@ -139,7 +162,11 @@ for my $resize ( @resizes ) {
 # Exif rotation
 # Exif with both width/height specified
 # Exif with keep_aspect
+SKIP:
 {
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 84
+        if $jpeg_version != 62;
+        
     my @rotations = qw(
         mirror_horiz
         180
@@ -181,7 +208,11 @@ for my $resize ( @resizes ) {
 }
         
 # Exif with ignore_exif
+SKIP:
 {
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 1
+        if $jpeg_version != 62;
+        
     my $outfile = _tmp("exif_ignore_50.jpg");
     my $im = Image::Scale->new( _f("exif_90_ccw.jpg") );
     $im->resize_gd( { width => 50, ignore_exif => 1 } );
@@ -191,7 +222,11 @@ for my $resize ( @resizes ) {
 }
 
 # multiple resize calls on same $im object, should throw away previous resize data
+SKIP:
 {
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 4
+        if $jpeg_version != 62;
+        
     for my $resize ( @resizes ) {
         my $outfile = _tmp("rgb_multiple_${resize}.jpg");
         my $im = Image::Scale->new( _f("rgb.jpg") );
@@ -204,7 +239,11 @@ for my $resize ( @resizes ) {
 }
 
 # resize from JPEG in scalar
+SKIP:
 {
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 1
+        if $jpeg_version != 62;
+        
     my $dataref = _load( _f("rgb.jpg") );
     
     my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
@@ -216,7 +255,11 @@ for my $resize ( @resizes ) {
 }
 
 # resize multiple from JPEG scalar
+SKIP:
 {
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 1
+        if $jpeg_version != 62;
+        
     my $dataref = _load( _f("rgb.jpg") );
     
     my $outfile = _tmp("rgb_resize_gd_fixed_point_w100.jpg");
@@ -229,6 +272,7 @@ for my $resize ( @resizes ) {
 }
 
 # offset image in MP3 ID3v2 tag
+SKIP:
 {
     my $outfile = _tmp("apic_gd_fixed_point_w50.jpg");
     my $im = Image::Scale->new(
@@ -241,6 +285,9 @@ for my $resize ( @resizes ) {
     
     $im->resize_gd_fixed_point( { width => 50 } );
     $im->save_jpeg($outfile);
+    
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 1
+        if $jpeg_version != 62;
     
     is( _compare( _load($outfile), "apic_gd_fixed_point_w50.jpg" ), 1, "JPEG resize_gd_fixed_point from offset ID3 tag ok" );
 }

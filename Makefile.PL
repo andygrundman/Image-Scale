@@ -9,6 +9,7 @@ use Getopt::Long;
 
 my (@INC, @LIBPATH, @LIBS);
 my ($JPEG, $PNG, $GIF, $MYEXTLIB);
+my ($JPEG_VERSION, $PNG_VERSION, $GIF_VERSION);
 
 my ($help, $jpeg_inc, $jpeg_lib, $png_inc, $png_lib, $gif_inc, $gif_lib);
 my ($jpeg_static, $png_static, $gif_static);
@@ -93,7 +94,9 @@ for my $incdir ( $jpeg_inc, @check ) {
             push @LIBS, '-ljpeg';
         }
         
-        $DEFINES .= ' -DHAVE_JPEG';
+        $JPEG_VERSION = _re_find( catfile($incdir, 'jpeglib.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
+        
+        $DEFINES .= " -DHAVE_JPEG -DJPEG_VERSION=$JPEG_VERSION";
         
         last;
     }
@@ -124,7 +127,9 @@ for my $incdir ( $png_inc, @check ) {
             push @LIBS, '-lpng -lz';
         }
         
-        $DEFINES .= ' -DHAVE_PNG';
+        $PNG_VERSION = _re_find( catfile($incdir, 'png.h'), qr/PNG_LIBPNG_VER_STRING\s+"([\d\.]+)"/ ) || 'unknown';
+        
+        $DEFINES .= " -DHAVE_PNG -DPNG_VERSION=$PNG_VERSION";
         
         last;
     }
@@ -153,7 +158,9 @@ for my $incdir ( $gif_inc, @check ) {
             push @LIBS, '-lgif';
         }
         
-        $DEFINES .= ' -DHAVE_GIF';
+        $GIF_VERSION = _re_find( catfile($incdir, 'gif_lib.h'), qr/GIF_LIB_VERSION\s+" Version ([\d\.]+)/ ) || 'unknown';
+        
+        $DEFINES .= " -DHAVE_GIF -DGIF_VERSION=$GIF_VERSION";
         
         last;
     }
@@ -168,9 +175,9 @@ unshift @INC, '-I. -I.. -Isrc -Iinclude';
 
 print "\n";
 print "Image::Scale will be built with:\n\n";
-print "  JPEG support:     " . ( $JPEG ? "yes ($jpeg_inc)" : "no, install libjpeg (v8 recommended)" ) . "\n";
-print "  PNG support:      " . ( $PNG ? "yes ($png_inc)" : "no, install libpng (v1.4.x recommended)" ) . "\n";
-print "  GIF support:      " . ( $GIF ? "yes ($gif_inc)" : "no, install giflib" ) . "\n";
+print "  JPEG support:     " . ( $JPEG ? "yes ($jpeg_inc, version $JPEG_VERSION)" : "no, install libjpeg (v8 recommended)" ) . "\n";
+print "  PNG support:      " . ( $PNG ? "yes ($png_inc, version $PNG_VERSION)" : "no, install libpng (v1.4.x recommended)" ) . "\n";
+print "  GIF support:      " . ( $GIF ? "yes ($gif_inc, version $GIF_VERSION)" : "no, install giflib" ) . "\n";
 print "\n";
 
 if ( $^O =~ /Win32/ ) {
@@ -194,3 +201,20 @@ WriteMakefile(
     MYEXTLIB          => $MYEXTLIB,
     depend            => { 'Scale.c' => "$inc_files $src_files" },
 );
+
+sub _re_find {
+    my ( $file, $re ) = @_;
+    
+    my $result;
+    
+    open my $fh, '<', $file or die "Unable to read $file\n";
+    while ( my $line = <$fh> ) {
+        if ( $line =~ $re ) {
+            $result = $1;
+            last;
+        }
+    }
+    close $fh;
+    
+    return $result;
+}

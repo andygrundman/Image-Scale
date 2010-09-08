@@ -241,3 +241,43 @@ CODE:
 {
   image_finish(im);
 }
+
+SV *
+jpeg_version(void)
+CODE:
+{
+#ifdef JPEG_VERSION
+  RETVAL = newSVpv( STRINGIFY(JPEG_VERSION), 0 );
+#else
+  RETVAL = &PL_sv_undef;
+#endif
+}
+OUTPUT:
+  RETVAL
+
+SV *
+png_version(void)
+CODE:
+{
+#ifdef PNG_VERSION
+  RETVAL = newSVpv( STRINGIFY(PNG_VERSION), 0 );
+#else
+  RETVAL = &PL_sv_undef;
+#endif
+}
+OUTPUT:
+  RETVAL
+
+SV *
+gif_version(void)
+CODE:
+{
+#ifdef GIF_VERSION
+  RETVAL = newSVpv( STRINGIFY(GIF_VERSION), 0 );
+#else
+  RETVAL = &PL_sv_undef;
+#endif
+}
+OUTPUT:
+  RETVAL
+

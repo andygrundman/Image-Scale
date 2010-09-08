@@ -2,11 +2,8 @@ Series-based resizing would be faster if implemented directly
 Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
 Investigate libjpeg-turbo for x86 builds
-Display library versions during Makefile.PL
-Skip jpg/gif/png tests if library isn't supported
 BMP RLE support
 BMP OS/2 format support
-Image comparison tests fail with other library versions
 
 Tests:
   width/height all formats
