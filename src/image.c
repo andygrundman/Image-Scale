@@ -190,7 +190,10 @@ image_init(HV *self, image *im)
 #endif
 #ifdef HAVE_GIF
     case GIF:
-      image_gif_read_header(im, file);
+      if ( !image_gif_read_header(im) ) {
+        ret = 0;
+        goto out;
+      }
       break;
 #endif
     case BMP:
@@ -288,7 +291,10 @@ image_resize(image *im)
 #endif
 #ifdef HAVE_GIF
     case GIF:
-      image_gif_load(im);
+      if ( !image_gif_load(im) ) {
+        ret = 0;
+        goto out;
+      }
       break;
 #endif
     case BMP:

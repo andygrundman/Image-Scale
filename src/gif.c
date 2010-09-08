@@ -18,39 +18,64 @@ static int InterlacedOffset[] = { 0, 4, 2, 1 };
 static int InterlacedJumps[] = { 8, 8, 4, 2 };
 
 static int
-image_gif_read_sv(GifFileType *gif, GifByteType *data, int len)
+image_gif_read_buf(GifFileType *gif, GifByteType *data, int len)
 {
   image *im = (image *)gif->UserData;
 
-  memcpy(data, SvPVX(im->sv_data) + im->sv_offset, len);
-  im->sv_offset += len;
+  DEBUG_TRACE("GIF read_buf wants %d bytes, %d in buffer\n", len, buffer_len(im->buf));
 
-  DEBUG_TRACE("image_gif_read_sv read %d bytes\n", len);
+  if (im->fh != NULL) {
+    if ( !_check_buf(im->fh, im->buf, len, MAX(len, BUFFER_SIZE)) ) {
+      goto eof;
+    }
+  }
+  else {
+    if (len > buffer_len(im->buf)) {
+      // read from SV into buffer
+      int sv_readlen = len - buffer_len(im->buf);
+
+      if (sv_readlen > sv_len(im->sv_data) - im->sv_offset)
+        goto eof;
+
+      DEBUG_TRACE("  Reading %d bytes of SV data @ %d\n", sv_readlen, im->sv_offset);    
+      buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, sv_readlen);
+      im->sv_offset += sv_readlen;
+     }
+  }
+
+  memcpy(data, buffer_ptr(im->buf), len);
+  buffer_consume(im->buf, len);
   
+  goto ok;
+
+eof:
+  warn("Image::Scale not enough GIF data (%s)\n", SvPVX(im->path));
+  return 0;
+
+ok:
   return len;
 }
 
-void
-image_gif_read_header(image *im, const char *file)
+int
+image_gif_read_header(image *im)
 {
-  if (file != NULL) {
-    im->gif = DGifOpenFileName((char *)file);
-  }
-  else {
-    im->sv_offset = 0;
-    im->gif = DGifOpen(im, image_gif_read_sv);
-  }
+  im->gif = DGifOpen(im, image_gif_read_buf);
   
   if (im->gif == NULL) {
     PrintGifError();
-    croak("Image::Scale unable to open GIF file %s\n", file);
+    warn("Image::Scale unable to open GIF file (%s)\n", SvPVX(im->path));
+    image_gif_finish(im);
+    return 0;
   }
   
   im->width  = im->gif->SWidth;
-  im->height = im->gif->SHeight;  
+  im->height = im->gif->SHeight;
+  
+  return 1;
 }
 
-void image_gif_load(image *im)
+int
+image_gif_load(image *im)
 {
   int x, y, ofs;
   GifRecordType RecordType;
@@ -69,14 +94,18 @@ void image_gif_load(image *im)
   do { 
     if (DGifGetRecordType(im->gif, &RecordType) == GIF_ERROR) {
       PrintGifError();
-      croak("Image::Scale unable to read GIF file\n");
+      warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+      image_gif_finish(im);
+      return 0;
     }
     
     switch (RecordType) {
       case IMAGE_DESC_RECORD_TYPE:      
         if (DGifGetImageDesc(im->gif) == GIF_ERROR) {
           PrintGifError();
-          croak("Image::Scale unable to read GIF file\n");
+          warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+          image_gif_finish(im);
+          return 0;
         }
         
         sp = &im->gif->SavedImages[im->gif->ImageCount - 1];
@@ -88,7 +117,9 @@ void image_gif_load(image *im)
         ColorMap = im->gif->Image.ColorMap ? im->gif->Image.ColorMap : im->gif->SColorMap;
         
         if (ColorMap == NULL) {
-          croak("Image::Scale GIF image has no colormap\n");
+          warn("Image::Scale GIF image has no colormap (%s)\n", SvPVX(im->path));
+          image_gif_finish(im);
+          return 0;
         }
         
         // Allocate storage for decompressed image
@@ -103,7 +134,9 @@ void image_gif_load(image *im)
               ofs = x * im->height;
               if (DGifGetLine(im->gif, line, 0) != GIF_OK) {
                 PrintGifError();
-                croak("Image::Scale unable to read GIF file\n");
+                warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+                image_gif_finish(im);
+                return 0;
               }
               
               for (y = 0; y < im->width; y++) {
@@ -123,7 +156,9 @@ void image_gif_load(image *im)
           for (x = 0; x < im->height; x++) {
             if (DGifGetLine(im->gif, line, 0) != GIF_OK) {
               PrintGifError();
-              croak("Image::Scale unable to read GIF file\n");
+              warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+              image_gif_finish(im);
+              return 0;
             }
     
             for (y = 0; y < im->width; y++) {
@@ -144,7 +179,9 @@ void image_gif_load(image *im)
       case EXTENSION_RECORD_TYPE:
         if (DGifGetExtension(im->gif, &temp_save.Function, &ExtData) == GIF_ERROR) {
           PrintGifError();
-          croak("Image::Scale unable to read GIF file\n");
+          warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+          image_gif_finish(im);
+          return 0;
         }
         
         if (temp_save.Function == 0xF9) { // transparency info
@@ -159,12 +196,16 @@ void image_gif_load(image *im)
           /* Create an extension block with our data */
           if (AddExtensionBlock(&temp_save, ExtData[0], &ExtData[1]) == GIF_ERROR) {
             PrintGifError();
-            croak("Image::Scale unable to read GIF file\n");
+            warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+            image_gif_finish(im);
+            return 0;
           }
 
           if (DGifGetExtensionNext(im->gif, &ExtData) == GIF_ERROR) {
             PrintGifError();
-            croak("Image::Scale unable to read GIF file\n");
+            warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+            image_gif_finish(im);
+            return 0;
           }
           
           temp_save.Function = 0;
@@ -176,6 +217,8 @@ void image_gif_load(image *im)
         break;
     }
   } while (RecordType != TERMINATE_RECORD_TYPE);
+  
+  return 1;
 }
 
 void
@@ -184,7 +227,7 @@ image_gif_finish(image *im)
   if (im->gif != NULL) {
     if (DGifCloseFile(im->gif) != GIF_OK) {
       PrintGifError();
-      croak("Image::Scale unable to close GIF file\n");
+      warn("Image::Scale unable to close GIF file (%s)\n", SvPVX(im->path));
     }
     im->gif = NULL;
   }

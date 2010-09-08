@@ -178,8 +178,9 @@ int image_bmp_load(image *im);
 void image_bmp_finish(image *im);
 
 #ifdef HAVE_GIF
-void image_gif_read_header(image *im, const char *file);
-void image_gif_load(image *im);
+int image_gif_read_header(image *im);
+int image_gif_load(image *im);
+void image_gif_finish(image *im);
 #endif
 
 #ifdef HAVE_PNG
