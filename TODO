@@ -1,8 +1,6 @@
 Series-based resizing would be faster if implemented directly
-Multiple calls to resize() on GIF, BMP
 Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
-Support new($file, $offset, $length) for images in audio files with latest Audio::Scan
 Investigate libjpeg-turbo for x86 builds
 Display library versions during Makefile.PL
 Skip jpg/gif/png tests if library isn't supported
