@@ -480,7 +480,7 @@ image_jpeg_save(image *im, const char *path, int quality)
     croak("Image::Scale cannot write JPEG with no output data\n");
   
   if ((out = fopen(path, "wb")) == NULL) {
-    croak("Image::Scale cannot open %s for writing", path);
+    croak("Image::Scale cannot open %s for writing\n", path);
   }
   
   cinfo.err = jpeg_std_error(&jerr);

@@ -118,7 +118,7 @@ image_init(HV *self, image *im)
   if (im->fh != NULL) {
     if ( !_check_buf(im->fh, im->buf, 8, BUFFER_SIZE) ) {
       image_finish(im);
-      croak("Unable to read image header for %s", file);
+      croak("Unable to read image header for %s\n", file);
     }
   }
   else {
@@ -219,7 +219,7 @@ image_alloc(image *im, int width, int height)
   
   if (im->memory_limit && im->memory_limit < im->memory_used + size) {
     image_finish(im);
-    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)", im->memory_used + size);
+    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)\n", im->memory_used + size);
   }
   
   DEBUG_TRACE("Allocating %d bytes for decompressed image\n", size);
@@ -311,7 +311,7 @@ image_resize(image *im)
   
   if (im->memory_limit && im->memory_limit < im->memory_used + im->outbuf_size) {
     image_finish(im);
-    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)", im->memory_used + im->outbuf_size);
+    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)\n", im->memory_used + im->outbuf_size);
   }
   
   DEBUG_TRACE("Allocating %d bytes for resized image of size %d x %d\n",

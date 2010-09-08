@@ -75,12 +75,12 @@ image_png_read_header(image *im)
 {
   im->png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, (png_voidp)im, image_png_error, image_png_warning);
   if ( !im->png_ptr )
-    croak("Image::Scale could not initialize libpng");
+    croak("Image::Scale could not initialize libpng\n");
   
   im->info_ptr = png_create_info_struct(im->png_ptr);
   if ( !im->info_ptr ) {
     png_destroy_read_struct(&im->png_ptr, (png_infopp)NULL, (png_infopp)NULL);
-    croak("Image::Scale could not initialize libpng");
+    croak("Image::Scale could not initialize libpng\n");
   }
   
   if ( setjmp( png_jmpbuf(im->png_ptr) ) ) {
@@ -402,13 +402,13 @@ image_png_to_sv(image *im, SV *sv_buf)
   
   png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
   if (!png_ptr) {
-    croak("Image::Scale could not initialize libpng");
+    croak("Image::Scale could not initialize libpng\n");
   }
   
   info_ptr = png_create_info_struct(png_ptr);
   if (!info_ptr) {
     png_destroy_write_struct(&png_ptr, NULL);
-    croak("Image::Scale could not initialize libpng");
+    croak("Image::Scale could not initialize libpng\n");
   }
   
   png_set_write_fn(png_ptr, sv_buf, image_png_write_sv, image_png_flush_sv);
