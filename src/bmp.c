@@ -107,10 +107,10 @@ image_bmp_read_header(image *im)
       DEBUG_TRACE("palette %d = %08x\n", i, im->palette->colors[i]);
     }
   }
-  else if (im->bpp == 16) {
-    if (im->compression == BI_BITFIELDS) {
-      int pos, bit, i;
-      
+  else if (im->compression == BI_BITFIELDS) {
+    int pos, bit, i;
+    
+    if (im->bpp == 16) {
       // Read 16-bit bitfield masks
       for (i = 0; i < 3; i++) {
         masks[i] = buffer_get_int_le(im->buf);
@@ -125,10 +125,31 @@ image_bmp_read_header(image *im)
         shifts[i] = pos - 1;
         
         // green can be 6 bits
-        if (i == 1 && masks[1] == 0x7e0)
-          ncolors[i] = (1 << 6) - 1;
+        if (i == 1) {
+          if (masks[1] == 0x7e0)
+            ncolors[1] = (1 << 6) - 1;
+          else
+            ncolors[1] = (1 << 5) - 1;
+        }
         
         DEBUG_TRACE("16bpp mask %d: %08x >> %d, ncolors %d\n", i, masks[i], shifts[i], ncolors[i]);
+      }
+    }
+    else { // 32-bit bitfields
+      // Read 32-bit bitfield masks
+      for (i = 0; i < 3; i++) {
+        masks[i] = buffer_get_int_le(im->buf);
+        
+        // Determine shift value
+        pos = 0;
+        bit = masks[i] & -masks[i];
+        while (bit) {
+          pos++;
+          bit >>= 1;
+        }
+        shifts[i] = pos - 1;
+        
+        DEBUG_TRACE("32bpp mask %d: %08x >> %d\n", i, masks[i], shifts[i]);
       }
     }
   }
@@ -155,6 +176,17 @@ image_bmp_load(image *im)
   
   // Bytes per line
   linebytes = ((im->width * im->bpp) + paddingbits) / 8;
+  
+  // No padding if RLE compressed
+  if (paddingbits && (im->compression == BI_RLE4 || im->compression == BI_RLE8))
+    paddingbits = 0;
+    
+  // XXX Don't worry about RLE support yet
+  if (im->compression == BI_RLE4 || im->compression == BI_RLE8) {
+    warn("Image::Scale does not support BMP RLE compression yet\n");
+    image_bmp_finish(im);
+    return 0;
+  }
   
   DEBUG_TRACE("linebits %d, paddingbits %d, linebytes %d\n", im->width * im->bpp, paddingbits, linebytes);
   
@@ -225,7 +257,7 @@ image_bmp_load(image *im)
           im->pixbuf[i] = COL(bptr[offset+2], bptr[offset+1], bptr[offset]);
           offset += 4;
           blen -= 4;
-          linebytes -= 4;     
+          linebytes -= 4;
           break;
 
         case 24: // 24-bit BGR
@@ -263,6 +295,7 @@ image_bmp_load(image *im)
           break;
           
         case 4:
+          // uncompressed
           if (mask == 0xF0) {
             im->pixbuf[i] = im->palette->colors[ (bptr[offset] & mask) >> 4 ];
             mask = 0xF;
@@ -275,7 +308,7 @@ image_bmp_load(image *im)
             mask = 0xF0;
           }
           break;
-        
+          
         case 1:
           im->pixbuf[i] = im->palette->colors[ (bptr[offset] & mask) ? 1 : 0 ];
           mask >>= 1;

@@ -1,12 +1,13 @@
 Series-based resizing would be faster if implemented directly
-Support < 24-bit BMP files, RLE compression
-Multiple calls to resize() on PNG, GIF, BMP
+Multiple calls to resize() on GIF, BMP
 Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
 Support new($file, $offset, $length) for images in audio files with latest Audio::Scan
 Investigate libjpeg-turbo for x86 builds
 Display library versions during Makefile.PL
 Skip jpg/gif/png tests if library isn't supported
+BMP RLE support
+BMP OS/2 format support
 
 Tests:
   width/height all formats
@@ -14,7 +15,6 @@ Tests:
   Corrupt/invalid files in all formats, triggering longjmp's
   memory_limit
   PNG <8-bit gray
-  BMP 32-bit BI_BITFIELDS
 
 In buildme.sh static build script, could comment out optional libjpeg features to reduce library size:
   DCT_IFAST_SUPPORTED

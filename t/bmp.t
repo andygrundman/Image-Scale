@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 1;
+use Test::More tests => 24;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -43,13 +43,13 @@ for my $type ( @types ) {
 # Normal width resize
 for my $resize ( @resizes ) {
     for my $type ( @types ) {
-        my $outfile = _tmp("${type}_${resize}_w50.png");
+        my $outfile = _tmp("${type}_${resize}_w127.png");
         
         my $im = Image::Scale->new( _f("${type}.bmp") );
-        $im->$resize( { width => 50 } );
+        $im->$resize( { width => 127 } );
         $im->save_png($outfile);
     
-        #is( _compare( _load($outfile), "${type}_${resize}_w50.png" ), 1, "BMP $type $resize 50 file ok" );
+        is( _compare( _load($outfile), "${type}_${resize}_w127.png" ), 1, "BMP $type $resize 127 file ok" );
     }
 }
 
