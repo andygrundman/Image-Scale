@@ -22,11 +22,12 @@ image_gif_read_buf(GifFileType *gif, GifByteType *data, int len)
 {
   image *im = (image *)gif->UserData;
 
-  DEBUG_TRACE("GIF read_buf wants %d bytes, %d in buffer\n", len, buffer_len(im->buf));
+  //DEBUG_TRACE("GIF read_buf wants %d bytes, %d in buffer\n", len, buffer_len(im->buf));
 
   if (im->fh != NULL) {
     if ( !_check_buf(im->fh, im->buf, len, MAX(len, BUFFER_SIZE)) ) {
-      goto eof;
+      warn("Image::Scale not enough GIF data (%s)\n", SvPVX(im->path));
+      return 0;
     }
   }
   else {
@@ -34,8 +35,10 @@ image_gif_read_buf(GifFileType *gif, GifByteType *data, int len)
       // read from SV into buffer
       int sv_readlen = len - buffer_len(im->buf);
 
-      if (sv_readlen > sv_len(im->sv_data) - im->sv_offset)
-        goto eof;
+      if (sv_readlen > sv_len(im->sv_data) - im->sv_offset) {
+        warn("Image::Scale not enough GIF data (%s)\n", SvPVX(im->path));
+        return 0;
+      }
 
       DEBUG_TRACE("  Reading %d bytes of SV data @ %d\n", sv_readlen, im->sv_offset);    
       buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, sv_readlen);
@@ -46,13 +49,6 @@ image_gif_read_buf(GifFileType *gif, GifByteType *data, int len)
   memcpy(data, buffer_ptr(im->buf), len);
   buffer_consume(im->buf, len);
   
-  goto ok;
-
-eof:
-  warn("Image::Scale not enough GIF data (%s)\n", SvPVX(im->path));
-  return 0;
-
-ok:
   return len;
 }
 
@@ -131,7 +127,7 @@ image_gif_load(image *im)
           int i;
           for (i = 0; i < 4; i++) {
             for (x = InterlacedOffset[i]; x < im->height; x += InterlacedJumps[i]) {
-              ofs = x * im->height;
+              ofs = x * im->width;
               if (DGifGetLine(im->gif, line, 0) != GIF_OK) {
                 PrintGifError();
                 warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
@@ -230,5 +226,7 @@ image_gif_finish(image *im)
       warn("Image::Scale unable to close GIF file (%s)\n", SvPVX(im->path));
     }
     im->gif = NULL;
+    
+    DEBUG_TRACE("image_gif_finish\n");
   }
 }
