@@ -69,7 +69,7 @@ enum resize_type {
 
 // Exif Orientation
 enum orientation {
-  ORIENTATION_NORMAL = 0,
+  ORIENTATION_NORMAL = 1,
   ORIENTATION_MIRROR_HORIZ,
   ORIENTATION_180,
   ORIENTATION_MIRROR_VERT,
