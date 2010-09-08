@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 24;
+use Test::More tests => 27;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -55,8 +55,25 @@ for my $resize ( @resizes ) {
 
 # XXX flipped image (negative height)
 
+# offset image in MP3 ID3v2 tag
+{
+    my $outfile = _tmp("apic_gd_fixed_point_w127.png");
+    my $im = Image::Scale->new(
+        _f('v2.4-apic-bmp-318-24632.mp3'),
+        { offset => 318, length => 24632 }
+    );
+    
+    is( $im->width, 127, 'BMP from offset ID3 tag width ok' );
+    is( $im->height, 64, 'BMP from offset ID3 tag height ok' );
+    
+    $im->resize_gd_fixed_point( { width => 127 } );
+    $im->save_png($outfile);
+    
+    is( _compare( _load($outfile), "apic_gd_fixed_point_w127.png" ), 1, "BMP resize_gd_fixed_point from offset ID3 tag ok" );
+}
+
 END {
-    #File::Path::rmtree($tmpdir);
+    File::Path::rmtree($tmpdir);
 }
 
 sub _f {    
