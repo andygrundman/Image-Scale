@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 9;
+use Test::More tests => 12;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -47,7 +47,22 @@ for my $resize ( @resizes ) {
 
 # XXX corrupt file
 
-# XXX offset image in MP3 ID3v2 tag
+# offset image in MP3 ID3v2 tag
+{
+    my $outfile = _tmp("apic_gd_fixed_point_w100.png");
+    my $im = Image::Scale->new(
+        _f('v2.4-apic-gif-318-5169.mp3'),
+        { offset => 318, length => 5169 }
+    );
+    
+    is( $im->width, 160, 'GIF from offset ID3 tag width ok' );
+    is( $im->height, 120, 'GIF from offset ID3 tag height ok' );
+    
+    $im->resize_gd_fixed_point( { width => 100 } );
+    $im->save_png($outfile);
+    
+    is( _compare( _load($outfile), "apic_gd_fixed_point_w100.png" ), 1, "GIF resize_gd_fixed_point from offset ID3 tag ok" );
+}
 
 END {
     File::Path::rmtree($tmpdir);
