@@ -47,7 +47,11 @@
 #define EPSILON 1.0e-12
 #define PI      3.14159265358979323846264338327950288419716939937510
 
+#ifdef _MSC_VER
+#define ARGUNUSED(arg) arg
+#else
 #define ARGUNUSED(arg) arg __attribute__((unused))
+#endif
 
 typedef uint32_t pix;
 
@@ -64,7 +68,7 @@ enum resize_type {
   IMAGE_SCALE_TYPE_GD = 0,
   IMAGE_SCALE_TYPE_GD_FIXED,
   IMAGE_SCALE_TYPE_GM,
-  IMAGE_SCALE_TYPE_GM_FIXED,
+  IMAGE_SCALE_TYPE_GM_FIXED
 };
 
 // Exif Orientation
@@ -79,8 +83,18 @@ enum orientation {
   ORIENTATION_270_CCW
 };
 
+// BMP Compression methods
+enum bmp_compression {
+  BMP_BI_RGB = 0,
+  BMP_BI_RLE8,
+  BMP_BI_RLE4,
+  BMP_BI_BITFIELDS,
+  BMP_BI_JPEG,
+  BMP_BI_PNG
+};
+
 typedef struct {
-  int32_t colors[256];
+  int colors[256];
 } palette;
 
 typedef struct {

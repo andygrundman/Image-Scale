@@ -14,16 +14,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
  
-// Compression methods
-enum {
-  BI_RGB = 0,
-  BI_RLE8,
-  BI_RLE4,
-  BI_BITFIELDS,
-  BI_JPEG,
-  BI_PNG,
-};
-
 // 16-bit color masks and shifts, default is 5-5-5
 static uint32_t masks[3]  = { 0x7c00, 0x3e0, 0x1f };
 static uint32_t shifts[3] = { 10, 5, 0 };
@@ -107,7 +97,7 @@ image_bmp_read_header(image *im)
       DEBUG_TRACE("palette %d = %08x\n", i, im->palette->colors[i]);
     }
   }
-  else if (im->compression == BI_BITFIELDS) {
+  else if (im->compression == BMP_BI_BITFIELDS) {
     int pos, bit, i;
     
     if (im->bpp == 16) {
@@ -204,11 +194,11 @@ image_bmp_load(image *im)
   linebytes = ((im->width * im->bpp) + paddingbits) / 8;
   
   // No padding if RLE compressed
-  if (paddingbits && (im->compression == BI_RLE4 || im->compression == BI_RLE8))
+  if (paddingbits && (im->compression == BMP_BI_RLE4 || im->compression == BMP_BI_RLE8))
     paddingbits = 0;
     
   // XXX Don't worry about RLE support yet
-  if (im->compression == BI_RLE4 || im->compression == BI_RLE8) {
+  if (im->compression == BMP_BI_RLE4 || im->compression == BMP_BI_RLE8) {
     warn("Image::Scale does not support BMP RLE compression yet\n");
     image_bmp_finish(im);
     return 0;

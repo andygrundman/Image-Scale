@@ -68,7 +68,7 @@ my @check = qw(/usr/include /usr/local/include /opt/local/include);
 unshift @check, split /:/, $ENV{INCLUDE};
 
 if ( $^O =~ /Win32/ ) {
-    # XXX add include paths to @check
+    push @check, '../libjpeg-turbo-1.0.0';
 }
 
 # Look for libjpeg
@@ -182,8 +182,15 @@ print "\n";
 
 if ( $^O =~ /Win32/ ) {
     *MY::postamble = sub {};
-    # XXX Add libjpeg(-turbo?) and libpng
-    $MYEXTLIB .= 'win32/zlib.lib ';
+
+    if ($JPEG) {
+        push @INC, '-I../libjpeg-turbo-1.0.0/win'; # for jconfig.h
+        $MYEXTLIB .= '../libjpeg-turbo-1.0.0/windows/jpeg-static.lib ';
+    }
+    
+    if ($PNG) {
+        $MYEXTLIB .= 'win32/zlib.lib ';
+    }
 }
 
 my $inc_files = join(' ', glob 'include/*.h');
