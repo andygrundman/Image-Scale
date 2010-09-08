@@ -52,7 +52,7 @@
 typedef uint32_t pix;
 
 enum image_type {
-  UNKNOWN,
+  UNKNOWN = 0,
   JPEG,
   GIF,
   PNG,
@@ -61,7 +61,7 @@ enum image_type {
 
 // Resize algorithms
 enum resize_type {
-  IMAGE_SCALE_TYPE_GD,
+  IMAGE_SCALE_TYPE_GD = 0,
   IMAGE_SCALE_TYPE_GD_FIXED,
   IMAGE_SCALE_TYPE_GM,
   IMAGE_SCALE_TYPE_GM_FIXED,
@@ -69,8 +69,7 @@ enum resize_type {
 
 // Exif Orientation
 enum orientation {
-  ORIENTATION_UNKNOWN,
-  ORIENTATION_NORMAL,
+  ORIENTATION_NORMAL = 0,
   ORIENTATION_MIRROR_HORIZ,
   ORIENTATION_180,
   ORIENTATION_MIRROR_VERT,
