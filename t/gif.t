@@ -3,10 +3,19 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 17;
+use Test::More;
 require Test::NoWarnings;
 
 use Image::Scale;
+
+my $gif_version = Image::Scale->gif_version();
+
+if ($gif_version) {
+    plan tests => 17;
+}
+else {
+    plan skip_all => 'Image::Scale not built with giflib support';
+}
 
 my $tmpdir = catdir( $FindBin::Bin, 'tmp' );
 if ( -d $tmpdir ) {

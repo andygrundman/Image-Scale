@@ -3,10 +3,21 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 47;
+use Test::More;
 require Test::NoWarnings;
 
 use Image::Scale;
+
+### PNG tests pass with both 1.4.3 and 1.2.44, don't need to skip any
+
+my $png_version = Image::Scale->png_version();
+
+if ($png_version) {
+    plan tests => 47;
+}
+else {
+    plan skip_all => 'Image::Scale not built with libpng support';
+}
 
 my $tmpdir = catdir( $FindBin::Bin, 'tmp' );
 if ( -d $tmpdir ) {
