@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 12;
+use Test::More tests => 14;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -45,7 +45,29 @@ for my $resize ( @resizes ) {
     }
 }
 
-# XXX corrupt file
+# corrupt file
+{
+    no strict 'subs';
+    no warnings;
+    
+    Test::NoWarnings::clear_warnings();
+    
+    my $im = Image::Scale->new( _f("corrupt.gif") );
+
+    # Hide stderr
+    open OLD_STDERR, '>&', STDERR;
+    close STDERR;
+    
+    my $ok = $im->resize_gd( { width => 50 } );
+    
+    # Restore stderr
+    open STDERR, '>&', OLD_STDERR;
+    
+    is( $ok, 0, 'GIF corrupt failed resize ok' );
+    
+    # Test that the correct warning was output
+    like( (Test::NoWarnings::warnings())[0]->getMessage, qr/Image::Scale unable to read GIF file/i, 'GIF corrupt error output ok' );
+}
 
 # offset image in MP3 ID3v2 tag
 {

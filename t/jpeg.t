@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 199;
+use Test::More tests => 201;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -111,7 +111,17 @@ for my $resize ( @resizes ) {
     is( _compare( _load($outfile), "truncated_50.jpg" ), 1, 'JPEG corrupt truncated resize_gd ok' );
 }
 
-# XXX corrupt file resulting in a fatal error
+# corrupt file resulting in a fatal error
+{
+    Test::NoWarnings::clear_warnings();
+    
+    my $im = Image::Scale->new( _f("corrupt.jpg") );
+    
+    is( $im, undef, 'JPEG corrupt failed new() ok' );
+    
+    # Test that the correct warning was output
+    like( (Test::NoWarnings::warnings())[0]->getMessage, qr/Image::Scale libjpeg error: Corrupt JPEG data/i, 'JPEG corrupt warning output ok' );
+}
 
 # keep_aspect bgcolor
 {
