@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 14;
+use Test::More tests => 17;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -67,6 +67,42 @@ for my $resize ( @resizes ) {
     
     # Test that the correct warning was output
     like( (Test::NoWarnings::warnings())[0]->getMessage, qr/Image::Scale unable to read GIF file/i, 'GIF corrupt error output ok' );
+}
+
+# multiple resize calls on same $im object, should throw away previous resize data
+{
+    my $outfile = _tmp("transparent_multiple_resize_gd_fixed_point.png");
+    my $im = Image::Scale->new( _f("transparent.gif") );
+    $im->resize_gd_fixed_point( { width => 50 } );
+    $im->resize_gd_fixed_point( { width => 100 } );
+    $im->save_png($outfile);
+    
+    is( _compare( _load($outfile), "transparent_multiple_resize_gd_fixed_point.png" ), 1, "GIF multiple resize_gd_fixed_point ok" );
+}
+
+# resize from GIF in scalar
+{
+    my $dataref = _load( _f("transparent.gif") );
+    
+    my $outfile = _tmp("transparent_resize_gd_fixed_point_w100_scalar.png");
+    my $im = Image::Scale->new($dataref);
+    $im->resize_gd_fixed_point( { width => 100 } );
+    $im->save_png($outfile);
+    
+    is( _compare( _load($outfile), "transparent_resize_gd_fixed_point_w100.png" ), 1, "GIF resize_gd_fixed_point from scalar ok" );
+}
+
+# resize multiple from GIF scalar
+{
+    my $dataref = _load( _f("transparent.gif") );
+    
+    my $outfile = _tmp("transparent_multiple_resize_gd_fixed_point_w100_scalar.png");
+    my $im = Image::Scale->new($dataref);
+    $im->resize_gd_fixed_point( { width => 150 } );
+    $im->resize_gd_fixed_point( { width => 100 } );
+    $im->save_png($outfile);
+    
+    is( _compare( _load($outfile), "transparent_resize_gd_fixed_point_w100.png" ), 1, "GIF resize_gd_fixed_point multiple from scalar ok" );
 }
 
 # offset image in MP3 ID3v2 tag

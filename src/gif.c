@@ -87,6 +87,25 @@ image_gif_load(image *im)
   temp_save.ExtensionBlocks = NULL;
   temp_save.ExtensionBlockCount = 0;
   
+  // If reusing the object a second time, start over
+  if (im->used) {
+    DEBUG_TRACE("Recreating giflib objects\n");
+    image_gif_finish(im);
+    
+    if (im->fh != NULL) {
+      // reset file to begining of image
+      PerlIO_seek(im->fh, im->image_offset, SEEK_SET);
+    }
+    else {
+      // reset SV read
+      im->sv_offset = im->image_offset;
+    }
+    
+    buffer_clear(im->buf);
+    
+    image_gif_read_header(im);
+  }
+  
   do { 
     if (DGifGetRecordType(im->gif, &RecordType) == GIF_ERROR) {
       PrintGifError();
