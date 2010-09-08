@@ -467,7 +467,8 @@ image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy)
       *oy = im->target_width - 1 - x;
       break;
     default:
-      warn("Image::Scale cannot rotate, unknown orientation value: %d\n", im->orientation);
+      if (x == 0 && y == 0)
+        warn("Image::Scale cannot rotate, unknown orientation value: %d\n", im->orientation);
       *ox = x;
       *oy = y;
       break;
