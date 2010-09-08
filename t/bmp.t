@@ -3,7 +3,7 @@ use strict;
 use File::Path ();
 use File::Spec::Functions;
 use FindBin ();
-use Test::More tests => 27;
+use Test::More tests => 28;
 require Test::NoWarnings;
 
 use Image::Scale;
@@ -54,6 +54,19 @@ for my $resize ( @resizes ) {
 }
 
 # XXX flipped image (negative height)
+
+# multiple resize calls on same $im object, should throw away previous resize data
+{
+    for my $resize ( @resizes ) {
+        my $outfile = _tmp("24bit_multiple_${resize}.png");
+        my $im = Image::Scale->new( _f("24bit.bmp") );
+        $im->$resize( { width => 50 } );
+        $im->$resize( { width => 127 } );
+        $im->save_png($outfile);
+        
+        is( _compare( _load($outfile), "24bit_multiple_${resize}.png" ), 1, "BMP multiple resize $resize ok" );
+    }
+}
 
 # offset image in MP3 ID3v2 tag
 {

@@ -169,6 +169,32 @@ image_bmp_load(image *im)
   int starty, lasty, incy, linebytes;
   unsigned char *bptr;
   
+  // If reusing the object a second time, reset buffer
+  if (im->used) {
+    DEBUG_TRACE("Resetting BMP state\n");
+    image_bmp_finish(im);
+    
+    buffer_clear(im->buf);
+    
+    if (im->fh != NULL) {
+      // reset file to begining of image
+      PerlIO_seek(im->fh, im->image_offset, SEEK_SET);
+      
+      if ( !_check_buf(im->fh, im->buf, 8, BUFFER_SIZE) ) {
+        warn("Image::Scale unable to read BMP header (%s)\n", SvPVX(im->path));
+        image_bmp_finish(im);
+        return 0;
+      }
+    }
+    else {
+      // reset SV read
+      im->sv_offset = MIN(sv_len(im->sv_data) - im->image_offset, BUFFER_SIZE);
+      buffer_append(im->buf, SvPVX(im->sv_data) + im->image_offset, im->sv_offset);
+    }
+    
+    image_bmp_read_header(im);
+  }
+  
   // Calculate bits of padding per line
   paddingbits = 32 - (im->width * im->bpp) % 32;
   if (paddingbits == 32)
