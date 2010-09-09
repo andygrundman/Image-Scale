@@ -297,8 +297,8 @@ has extremely poor floating-point performance.
 
 =head1 SEE ALSO
 
-L<GD>
-L<Image::Magick>
+L<GD>,
+L<Image::Magick>,
 L<Imager>
 
 =head1 AUTHOR
