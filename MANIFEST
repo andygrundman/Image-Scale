@@ -11,6 +11,7 @@ include/pstdint.h
 lib/Image/Scale.pm
 Makefile.PL
 MANIFEST			This list of files
+README
 README.win32
 Scale.xs
 src/bmp.c

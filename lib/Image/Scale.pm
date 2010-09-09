@@ -151,7 +151,18 @@ Returns the width of the original source image.
 
 Returns the height of the original source image.
 
-=head2 resize_*( \%OPTIONS )
+=head2 resize( \%OPTIONS )
+
+resize() uses the default resize algorithm, which is resize_gd_fixed_point.  See below
+for details on the available options.
+
+=head2 resize_gd( \%OPTIONS )
+
+=head2 resize_gd_fixed_point( \%OPTIONS )
+
+=head2 resize_gm( \%OPTIONS )
+
+=head2 resize_gm_fixed_point( \%OPTIONS )
 
 The 4 resize methods available are:
 
@@ -237,6 +248,15 @@ Saves the resized image as a PNG to PATH. Transparency is preserved when saving 
 
 Returns the resized PNG image as scalar data.
 
+=head2 jpeg_version()
+
+=head2 png_version()
+
+=head2 gif_version()
+
+Returns the version of the image library used.  Returns undef if support for that image
+format was not built.
+
 =head1 PERFORMANCE
 
 These numbers were gathered on my 2.4ghz MacBook Pro.
@@ -277,7 +297,9 @@ has extremely poor floating-point performance.
 
 =head1 SEE ALSO
 
-TODO
+L<GD>
+L<Image::Magick>
+L<Imager>
 
 =head1 AUTHOR
 
