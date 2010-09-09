@@ -83,7 +83,7 @@ image_init(HV *self, image *im)
   im->target_width     = 0;
   im->target_height    = 0;
   im->keep_aspect      = 0;
-  im->resize_type      = IMAGE_SCALE_TYPE_GD;
+  im->resize_type      = IMAGE_SCALE_TYPE_GD_FIXED;
   im->filter           = 0;
   im->bgcolor          = 0;
   im->used             = 0;
