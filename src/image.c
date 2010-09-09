@@ -262,6 +262,7 @@ image_resize(image *im)
       im->memory_used -= im->outbuf_size;
     }
     
+#ifdef HAVE_JPEG
     // For a JPEG we have to reset the scaled size in case we're resizing larger than before
     if (im->type == JPEG) {
       im->width = im->cinfo->image_width;
@@ -269,6 +270,7 @@ image_resize(image *im)
       
       DEBUG_TRACE("JPEG dimensions set back to original %d x %d\n", im->width, im->height);
     }
+#endif
   }
   
   // Load the source image into memory
