@@ -1,5 +1,5 @@
-#ifdef WIN32
-#define NO_XSLOCKS
+#ifdef _MSC_VER
+#define NO_XSLOCKS // Needed to avoid PerlProc_setjmp/PerlProc_longjmp unresolved symbols
 #endif
 
 // On Debian, pngconf.h might complain about setjmp.h being loaded before PNG

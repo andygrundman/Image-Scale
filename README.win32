@@ -1,0 +1,47 @@
+Win32 build instructions
+-------------------------
+
+Tested using MS Visual Studio 2005 (VC8)
+
+NOTE: If using a later version of any library, you need to modify Makefile.PL.
+
+Be sure to run C:\Prorgam Files\Microsoft Visual Studio 8\vc\vcvarsall.bat
+
+1. Build libjpeg-turbo
+
+Requires cygwin installed with GNU make.
+
+* Download libjpeg-turbo-1.0.0.tar.gz
+  NOTE: The vc.exe version only contains a DLL not a static library.
+* Extract to ../libjpeg-turbo-1.0.0
+* Download and install nasm.  Copy nasm.exe to the libjpeg-turbo-1.0.0 dir.
+* Run: make -f win/Makefile
+* Static library will be in windows/jpeg-static.lib
+
+2. Build zlib (with x86 ASM)
+
+* Download zlib125.zip, extract to ../zlib (needed for libpng to find it)
+* Run: nmake /f win32/Makefile.msc LOC="-DASMV -DASMINF" OBJA="inffas32.obj match686.obj"
+
+3. Build libpng
+
+* Download png143.zip, extract to ../lpng143
+* Run: nmake /f scripts/makefile.vcwin32 test
+
+4. Build giflib, this one is a pain...
+
+* Download giflib-4.1.6.tar.gz, extract to ../giflib-4.1.6
+* Download http://www.azillionmonkeys.com/qed/pstdint.h as C:\Program Files\Microsoft Visual Studio 8\vc\include\stdint.h
+* The old VC project files won't work, to get one that does:
+  * Get the vs2008-1.66.zip file from Leptonica, http://code.google.com/p/leptonica/downloads/list
+  * Extract vs2008/giflib4.1.6.zip and copy giflib.vcproj to giflib-4.1.6/windows
+  * Edit giflib.vcproj and change Version from 9.00 to 8.00
+  * Search/replace "..\..\lib\" to "..\lib\"
+  * Open giflib.vcproj in Visual Studio.
+  * Change to Release and build.
+
+5. Build Image::Scale
+
+perl Makefile.PL
+nmake
+nmake test
