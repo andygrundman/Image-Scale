@@ -1,3 +1,7 @@
+#ifdef WIN32
+#define NO_XSLOCKS
+#endif
+
 // On Debian, pngconf.h might complain about setjmp.h being loaded before PNG
 // so we have to load png.h first
 #ifdef HAVE_PNG
