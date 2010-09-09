@@ -5,7 +5,7 @@ Tested using MS Visual Studio 2005 (VC8)
 
 NOTE: If using a later version of any library, you need to modify Makefile.PL.
 
-Be sure to run C:\Prorgam Files\Microsoft Visual Studio 8\vc\vcvarsall.bat
+Be sure to run C:\Program Files\Microsoft Visual Studio 8\vc\vcvarsall.bat
 
 1. Build libjpeg-turbo
 
