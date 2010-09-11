@@ -13,7 +13,7 @@ use Image::Scale;
 my $png_version = Image::Scale->png_version();
 
 if ($png_version) {
-    plan tests => 47;
+    plan tests => 45;
 }
 else {
     plan skip_all => 'Image::Scale not built with libpng support';
@@ -78,11 +78,9 @@ for my $resize ( @resizes ) {
     # Test that $im is undef when new fails
     ok( !defined $im, 'new() returns undef on error ok' );
     
-    # Test that the correct warnings were output
+    # Test that the correct warning was output
     my @warnings = Test::NoWarnings::warnings();
-    like( $warnings[0]->getMessage, qr/Image::Scale libpng warning: Image width is zero in IHDR/, 'PNG corrupt warning 1 output ok' );
-    like( $warnings[1]->getMessage, qr/Image::Scale libpng warning: Image height is zero in IHDR/, 'PNG corrupt warning 2 output ok' );
-    like( $warnings[2]->getMessage, qr/Image::Scale libpng error: Invalid IHDR data/, 'PNG corrupt error 1 output ok' );
+    like( $warnings[0]->getMessage, qr/zero in IHDR/, 'PNG corrupt warning 1 output ok' );
 }
 
 {

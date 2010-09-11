@@ -5,6 +5,7 @@ Use libjpeg-turbo for static x86 builds
 BMP RLE support
 BMP OS/2 format support
 bmp/gif tests fail if PNG support is not built
+floating-point tests may fail on other platforms, should use fixed-point for all image comparison tests
 
 Tests:
   width/height all formats

@@ -391,6 +391,8 @@ image_jpeg_load(image *im)
   strncpy(filename, SvPVX(im->path), FILENAME_LEN);
   if (sv_len(im->path) > FILENAME_LEN)
     filename[FILENAME_LEN] = 0;
+    
+  // XXX look at libjpeg-turbo colorspace extensions for faster decompression (JCS_EXT_RGBX)
   
   jpeg_start_decompress(im->cinfo);
   
@@ -458,6 +460,8 @@ image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
       Safefree(data);
     return;
   }
+  
+  // XXX look at libjpeg-turbo colorspace extensions for faster compression (JCS_EXT_RGBX)
   
   jpeg_set_defaults(cinfo);
   jpeg_set_quality(cinfo, quality, TRUE);
