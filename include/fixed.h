@@ -45,10 +45,11 @@ static inline float fixed_to_float(fixed_t x) {
   return ((float)((x) / (float)(1L << FRAC_BITS)));
 }
 
-#if defined(__GNUC__) && defined(__arm__)
+#if defined(__GNUC__)
+# if defined(__arm__)
 static inline fixed_t fixed_mul(fixed_t x, fixed_t y) {
   fixed_t __hi, __lo, __result;
-  asm(
+  __asm__ __volatile__(
     "smull %0, %1, %3, %4\n\t"
     "movs %0, %0, lsr %5\n\t"
     "adc %2, %0, %1, lsl %6"
@@ -58,11 +59,25 @@ static inline fixed_t fixed_mul(fixed_t x, fixed_t y) {
   );
   return __result;
 }
-#elif defined(__GNUC__) && defined(PADRE) // Sparc ReadyNAS
+# elif defined(__i386__) || defined(__x86_64__)
+// This improves fixed-point performance about 15-20% on x86
+static inline fixed_t fixed_mul(fixed_t x, fixed_t y)
+{
+  fixed_t __hi, __lo;
+  __asm__ __volatile__(
+    "imull %3\n"
+    "shrdl %4, %1, %0"
+    : "=a"(__lo), "=d"(__hi)
+    : "%a"(x), "rm"(y), "I"(FRAC_BITS)
+    : "cc"
+  );
+  return __lo;
+}
+# elif defined(PADRE) // Sparc ReadyNAS
 static inline fixed_t fixed_mul(fixed_t x, fixed_t y)
 {
   fixed_t __hi, __lo, __result;
-  asm(
+  __asm__ __volatile__(
     " nop\n"
     " nop\n"
     " smul %3, %4, %0\n"
@@ -76,11 +91,12 @@ static inline fixed_t fixed_mul(fixed_t x, fixed_t y)
   );
   return __result;
 }
-#else
-static inline fixed_t fixed_mul(fixed_t x, fixed_t y) {
-  return (fixed_t)(((int64_t)x * (int64_t)y) >> FRAC_BITS);
+# else
+static fixed_t fixed_mul(fixed_t x, fixed_t y) {
+  return (fixed_t)(((int64_t)x * y) >> FRAC_BITS);
 }
-#endif
+# endif
+#endif // __GNUC__
 
 // XXX ARM version from http://me.henri.net/fp-div.html ?
 static inline fixed_t fixed_div(fixed_t x, fixed_t y) {

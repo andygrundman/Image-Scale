@@ -2,12 +2,6 @@
 
 use strict;
 
-# Needed for custom build of GD with JPEG scaling
-use lib qw(
-    /Users/andy/dev/Slim/7.6/trunk/server/CPAN
-    /Users/andy/dev/Slim/7.6/trunk/server/CPAN/arch/5.10/darwin-thread-multi-2level
-);
-
 use Benchmark qw(cmpthese);
 use Image::Scale;
 use GD;
@@ -123,7 +117,7 @@ my $jpg = {
         $img->save_jpeg('resize_gm_fixed_point.jpg') if !$saves->{resize_gm_fixed}++;
     },
     gd_resample => sub {
-        my $src = GD::Image->newFromJpegScaled($path, $width, $width);
+        my $src = GD::Image->newFromJpeg($path);
         my $dst = GD::Image->new($width, $width);
         $dst->copyResampled(
 			$src,
