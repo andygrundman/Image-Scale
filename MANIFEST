@@ -59,6 +59,7 @@ t/images/jpg/exif_mirror_horiz_90_ccw.jpg
 t/images/jpg/exif_mirror_vert.jpg
 t/images/jpg/gray.jpg
 t/images/jpg/gray_progressive.jpg
+t/images/jpg/large-exif.jpg
 t/images/jpg/rgb.jpg
 t/images/jpg/rgb_progressive.jpg
 t/images/jpg/truncated.jpg

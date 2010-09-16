@@ -211,7 +211,7 @@ image_jpeg_parse_exif_orientation(image *im, Buffer *exif)
   
   buffer_consume(exif, 2); // 0x2a00
   
-  offset = (bo == LE) ? buffer_get_int_le(exif) : buffer_get_int(exif);    
+  offset = (bo == LE) ? buffer_get_int_le(exif) : buffer_get_int(exif);
   buffer_consume(exif, offset - 8); // skip to offset (from the start of the byte order)
   
   num_entries = (bo == LE) ? buffer_get_short_le(exif) : buffer_get_short(exif);
@@ -287,8 +287,8 @@ image_jpeg_read_header(image *im)
   //im->cinfo->err->trace_level = 3;
 #endif
   
-  // Save APP1 marker for EXIF, only need the first 1024 bytes
-  jpeg_save_markers(im->cinfo, 0xE1, 1024);
+  // Save APP1 marker for EXIF
+  jpeg_save_markers(im->cinfo, 0xE1, 1024 * 64);
   
   jpeg_read_header(im->cinfo, TRUE);
   

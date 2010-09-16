@@ -11,7 +11,7 @@ use Image::Scale;
 my $jpeg_version = Image::Scale->jpeg_version();
 
 if ($jpeg_version) {
-    plan tests => 201;
+    plan tests => 202;
 }
 else {
     plan skip_all => 'Image::Scale not built with libjpeg support';
@@ -290,6 +290,12 @@ SKIP:
         if $jpeg_version != 62;
     
     is( _compare( _load($outfile), "apic_gd_fixed_point_w50.jpg" ), 1, "JPEG resize_gd_fixed_point from offset ID3 tag ok" );
+}
+
+# Exif tag larger than 4K
+{
+    my $im = Image::Scale->new( _f('large-exif.jpg') );
+    is( $im->width, 200, 'JPEG large Exif ok' );
 }
 
 # XXX fatal errors during compression, will this ever actually happen?
