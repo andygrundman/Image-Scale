@@ -11,7 +11,7 @@ use Image::Scale;
 my $jpeg_version = Image::Scale->jpeg_version();
 
 if ($jpeg_version) {
-    plan tests => 202;
+    plan tests => 112;
 }
 else {
     plan skip_all => 'Image::Scale not built with libjpeg support';
@@ -60,6 +60,10 @@ SKIP:
             $im->$resize( { width => 100 } );
             $im->save_jpeg($outfile);
             my $data = $im->as_jpeg();
+            
+            # Only perform file comparisons for fixed-point methods, as floating-point
+            # is expected to differ on different platforms
+            next if $resize !~ /fixed/;
     
             is( _compare( _load($outfile), "${type}_${resize}_w100.jpg" ), 1, "JPEG $type $resize 100 file ok" );
             is( _compare( \$data, "${type}_${resize}_w100.jpg" ), 1, "JPEG $type $resize 100 scalar ok" );
@@ -75,6 +79,10 @@ SKIP:
             $im->$resize( { width => 50, height => 50 } );
             $im->save_jpeg($outfile);
             my $data = $im->as_jpeg();
+            
+            # Only perform file comparisons for fixed-point methods, as floating-point
+            # is expected to differ on different platforms
+            next if $resize !~ /fixed/;
         
             is( _compare( _load($outfile), "${type}_${resize}_50x50.jpg" ), 1, "JPEG $type $resize 50x50 square file ok" );
             is( _compare( \$data, "${type}_${resize}_50x50.jpg" ), 1, "JPEG $type $resize 50x50 square scalar ok" );
@@ -88,6 +96,10 @@ SKIP:
         my $im = Image::Scale->new( _f("rgb.jpg") );
         $im->$resize( { width => 50, height => 50, keep_aspect => 1 } );
         $im->save_jpeg($outfile);
+        
+        # Only perform file comparisons for fixed-point methods, as floating-point
+        # is expected to differ on different platforms
+        next if $resize !~ /fixed/;
     
         is( _compare( _load($outfile), "${resize}_50x50_keep_aspect_height.jpg" ), 1, "JPEG $resize 50x50 keep_aspect file ok" );
     }
@@ -99,6 +111,10 @@ SKIP:
         my $im = Image::Scale->new( _f("exif_90_ccw.jpg") );
         $im->$resize( { width => 50, height => 50, ignore_exif => 1, keep_aspect => 1 } );
         $im->save_jpeg($outfile);
+        
+        # Only perform file comparisons for fixed-point methods, as floating-point
+        # is expected to differ on different platforms
+        next if $resize !~ /fixed/;
     
         is( _compare( _load($outfile), "${resize}_50x50_keep_aspect_width.jpg" ), 1, "JPEG $resize 50x50 keep_aspect file ok" );
     }
@@ -118,7 +134,7 @@ SKIP:
     
     my $outfile = _tmp("truncated_50.jpg");
     my $im = Image::Scale->new( _f("truncated.jpg") );
-    $im->resize_gd( { width => 50 } );
+    $im->resize_gd_fixed_point( { width => 50 } );
     $im->save_jpeg($outfile);
     
     # Test that the correct warning was output
@@ -154,6 +170,10 @@ SKIP:
         my $im = Image::Scale->new( _f("rgb.jpg") );
         $im->$resize( { width => 50, height => 50, keep_aspect => 1, bgcolor => 0x123456 } );
         $im->save_jpeg($outfile);
+        
+        # Only perform file comparisons for fixed-point methods, as floating-point
+        # is expected to differ on different platforms
+        next if $resize !~ /fixed/;
     
         is( _compare( _load($outfile), "bgcolor_${resize}.jpg" ), 1, "JPEG bgcolor $resize ok" );
     }
@@ -183,6 +203,10 @@ SKIP:
             my $im = Image::Scale->new( _f("exif_${r}.jpg") );
             $im->$resize( { width => 50 } );
             $im->save_jpeg($outfile);
+            
+            # Only perform file comparisons for fixed-point methods, as floating-point
+            # is expected to differ on different platforms
+            next if $resize !~ /fixed/;
         
             is( _compare( _load($outfile), "exif_${r}_${resize}_50.jpg" ), 1, "JPEG EXIF auto-rotation $r $resize width 50 ok" );
         }
@@ -192,6 +216,10 @@ SKIP:
             my $im = Image::Scale->new( _f("exif_${r}.jpg") );
             $im->$resize( { width => 50, height => 50 } );
             $im->save_jpeg($outfile);
+            
+            # Only perform file comparisons for fixed-point methods, as floating-point
+            # is expected to differ on different platforms
+            next if $resize !~ /fixed/;
         
             is( _compare( _load($outfile), "exif_${r}_${resize}_50x50.jpg" ), 1, "JPEG EXIF auto-rotation $r $resize 50x50 ok" );
         }
@@ -201,6 +229,10 @@ SKIP:
             my $im = Image::Scale->new( _f("exif_${r}.jpg") );
             $im->$resize( { width => 50, height => 50, keep_aspect => 1 } );
             $im->save_jpeg($outfile);
+            
+            # Only perform file comparisons for fixed-point methods, as floating-point
+            # is expected to differ on different platforms
+            next if $resize !~ /fixed/;
         
             is( _compare( _load($outfile), "exif_${r}_${resize}_50x50_keep_aspect.jpg" ), 1, "JPEG EXIF auto-rotation $r $resize 50x50 keep_aspect ok" );
         }
@@ -215,7 +247,7 @@ SKIP:
         
     my $outfile = _tmp("exif_ignore_50.jpg");
     my $im = Image::Scale->new( _f("exif_90_ccw.jpg") );
-    $im->resize_gd( { width => 50, ignore_exif => 1 } );
+    $im->resize_gd_fixed_point( { width => 50, ignore_exif => 1 } );
     $im->save_jpeg($outfile);
     
     is( _compare( _load($outfile), "exif_ignore_50.jpg" ), 1, "JPEG EXIF ignore_exif ok" );
@@ -233,6 +265,10 @@ SKIP:
         $im->$resize( { width => 50 } );
         $im->$resize( { width => 75 } );
         $im->save_jpeg($outfile);
+        
+        # Only perform file comparisons for fixed-point methods, as floating-point
+        # is expected to differ on different platforms
+        next if $resize !~ /fixed/;
         
         is( _compare( _load($outfile), "rgb_multiple_${resize}.jpg" ), 1, "JPEG multiple resize $resize ok" );
     }
