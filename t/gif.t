@@ -9,6 +9,7 @@ require Test::NoWarnings;
 use Image::Scale;
 
 my $gif_version = Image::Scale->gif_version();
+my $png_version = Image::Scale->png_version();
 
 if ($gif_version) {
     plan tests => 17;
@@ -42,15 +43,20 @@ for my $type ( @types ) {
 }
 
 # Normal width resize
-for my $resize ( @resizes ) {
-    for my $type ( @types ) {
-        my $outfile = _tmp("${type}_${resize}_w100.png");
-        
-        my $im = Image::Scale->new( _f("${type}.gif") );
-        $im->$resize( { width => 100 } );
-        $im->save_png($outfile);
+SKIP:
+{
+    skip "PNG support not built, skipping file comparison tests", 3 if !$png_version;
     
-        is( _compare( _load($outfile), "${type}_${resize}_w100.png" ), 1, "GIF $type $resize 100 file ok" );
+    for my $resize ( @resizes ) {
+        for my $type ( @types ) {
+            my $outfile = _tmp("${type}_${resize}_w100.png");
+        
+            my $im = Image::Scale->new( _f("${type}.gif") );
+            $im->$resize( { width => 100 } );
+            $im->save_png($outfile);
+    
+            is( _compare( _load($outfile), "${type}_${resize}_w100.png" ), 1, "GIF $type $resize 100 file ok" );
+        }
     }
 }
 
@@ -79,7 +85,10 @@ for my $resize ( @resizes ) {
 }
 
 # multiple resize calls on same $im object, should throw away previous resize data
+SKIP:
 {
+    skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    
     my $outfile = _tmp("transparent_multiple_resize_gd_fixed_point.png");
     my $im = Image::Scale->new( _f("transparent.gif") );
     $im->resize_gd_fixed_point( { width => 50 } );
@@ -90,7 +99,10 @@ for my $resize ( @resizes ) {
 }
 
 # resize from GIF in scalar
+SKIP:
 {
+    skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    
     my $dataref = _load( _f("transparent.gif") );
     
     my $outfile = _tmp("transparent_resize_gd_fixed_point_w100_scalar.png");
@@ -102,7 +114,10 @@ for my $resize ( @resizes ) {
 }
 
 # resize multiple from GIF scalar
+SKIP:
 {
+    skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    
     my $dataref = _load( _f("transparent.gif") );
     
     my $outfile = _tmp("transparent_multiple_resize_gd_fixed_point_w100_scalar.png");
@@ -115,6 +130,7 @@ for my $resize ( @resizes ) {
 }
 
 # offset image in MP3 ID3v2 tag
+SKIP:
 {
     my $outfile = _tmp("apic_gd_fixed_point_w100.png");
     my $im = Image::Scale->new(
@@ -126,6 +142,9 @@ for my $resize ( @resizes ) {
     is( $im->height, 120, 'GIF from offset ID3 tag height ok' );
     
     $im->resize_gd_fixed_point( { width => 100 } );
+    
+    skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    
     $im->save_png($outfile);
     
     is( _compare( _load($outfile), "apic_gd_fixed_point_w100.png" ), 1, "GIF resize_gd_fixed_point from offset ID3 tag ok" );

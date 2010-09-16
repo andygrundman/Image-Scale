@@ -8,6 +8,8 @@ require Test::NoWarnings;
 
 use Image::Scale;
 
+my $png_version = Image::Scale->png_version();
+
 my $tmpdir = catdir( $FindBin::Bin, 'tmp' );
 if ( -d $tmpdir ) {
     File::Path::rmtree($tmpdir);
@@ -40,23 +42,31 @@ for my $type ( @types ) {
     is( $im->height, 64, "BMP $type height ok" );
 }
 
-# Normal width resize
-for my $resize ( @resizes ) {
-    for my $type ( @types ) {
-        my $outfile = _tmp("${type}_${resize}_w127.png");
+SKIP:
+{
+    skip "PNG support not built, skipping file comparison tests", 8 if !$png_version;
         
-        my $im = Image::Scale->new( _f("${type}.bmp") );
-        $im->$resize( { width => 127 } );
-        $im->save_png($outfile);
+    # Normal width resize
+    for my $resize ( @resizes ) {
+        for my $type ( @types ) {
+            my $outfile = _tmp("${type}_${resize}_w127.png");
+        
+            my $im = Image::Scale->new( _f("${type}.bmp") );
+            $im->$resize( { width => 127 } );
+            $im->save_png($outfile);
     
-        is( _compare( _load($outfile), "${type}_${resize}_w127.png" ), 1, "BMP $type $resize 127 file ok" );
+            is( _compare( _load($outfile), "${type}_${resize}_w127.png" ), 1, "BMP $type $resize 127 file ok" );
+        }
     }
 }
 
 # XXX flipped image (negative height)
 
 # multiple resize calls on same $im object, should throw away previous resize data
+SKIP:
 {
+    skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+        
     my $outfile = _tmp("24bit_multiple_resize_gd_fixed_point.png");
     my $im = Image::Scale->new( _f("24bit.bmp") );
     $im->resize_gd_fixed_point( { width => 50 } );
@@ -67,7 +77,10 @@ for my $resize ( @resizes ) {
 }
 
 # resize from BMP in scalar
+SKIP:
 {
+    skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    
     my $dataref = _load( _f("24bit.bmp") );
     
     my $outfile = _tmp("24bit_resize_gd_fixed_point_w127_scalar.png");
@@ -79,7 +92,10 @@ for my $resize ( @resizes ) {
 }
 
 # resize multiple from BMP scalar
+SKIP:
 {
+    skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    
     my $dataref = _load( _f("24bit.bmp") );
     
     my $outfile = _tmp("24bit_multiple_resize_gd_fixed_point_w127_scalar.png");
@@ -92,6 +108,7 @@ for my $resize ( @resizes ) {
 }
 
 # offset image in MP3 ID3v2 tag
+SKIP:
 {
     my $outfile = _tmp("apic_gd_fixed_point_w127.png");
     my $im = Image::Scale->new(
@@ -103,6 +120,9 @@ for my $resize ( @resizes ) {
     is( $im->height, 64, 'BMP from offset ID3 tag height ok' );
     
     $im->resize_gd_fixed_point( { width => 127 } );
+    
+    skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    
     $im->save_png($outfile);
     
     is( _compare( _load($outfile), "apic_gd_fixed_point_w127.png" ), 1, "BMP resize_gd_fixed_point from offset ID3 tag ok" );

@@ -1,27 +1,10 @@
 Series-based resizing would be faster if implemented directly
 Handle fixed-point overflow in GM fixed
 Small memory leak in GIF, probably in libgif
-Use libjpeg-turbo for static x86 builds
 BMP RLE support
 BMP OS/2 format support
-bmp/gif tests fail if PNG support is not built
 floating-point tests may fail on other platforms, should use fixed-point for all image comparison tests
 
 Tests:
-  width/height all formats
-  keep_aspect, both width/height padding
   Corrupt/invalid files in all formats, triggering longjmp's
-  memory_limit
   PNG <8-bit gray
-
-In buildme.sh static build script, could comment out optional libjpeg features to reduce library size:
-  DCT_IFAST_SUPPORTED
-  DCT_FLOAT_SUPPORTED (benchmark integer vs float DCT)
-  INPUT_SMOOTHING_SUPPORTED
-  C_PROGRESSIVE_SUPPORTED (we won't write progressive JPEG files)
-  C_MULTISCAN_FILES_SUPPORTED (won't write them)
-  BLOCK_SMOOTHING_SUPPORTED
-  QUANT_1PASS_SUPPORTED
-  QUANT_2PASS_SUPPORTED
-  
-Various PNG defines too, see pngconf.h
