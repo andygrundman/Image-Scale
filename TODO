@@ -1,9 +1,8 @@
 Series-based resizing would be faster if implemented directly
 Handle fixed-point overflow in GM fixed
-Small memory leak in GIF, probably in libgif
+Small memory leak in giflib
 BMP RLE support
 BMP OS/2 format support
-floating-point tests may fail on other platforms, should use fixed-point for all image comparison tests
 
 Tests:
   Corrupt/invalid files in all formats, triggering longjmp's
