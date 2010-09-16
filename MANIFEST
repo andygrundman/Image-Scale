@@ -148,7 +148,6 @@ t/ref/jpg/gray_progressive_resize_gd_fixed_point_50x50.jpg
 t/ref/jpg/gray_progressive_resize_gd_fixed_point_w100.jpg
 t/ref/jpg/gray_progressive_resize_gm_fixed_point_50x50.jpg
 t/ref/jpg/gray_progressive_resize_gm_fixed_point_w100.jpg
-t/ref/jpg/gray_progressive_resize_gm_w100.jpg
 t/ref/jpg/gray_resize_gd_fixed_point_50x50.jpg
 t/ref/jpg/gray_resize_gd_fixed_point_w100.jpg
 t/ref/jpg/gray_resize_gm_fixed_point_50x50.jpg
