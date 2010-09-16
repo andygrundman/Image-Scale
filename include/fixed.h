@@ -91,12 +91,29 @@ static inline fixed_t fixed_mul(fixed_t x, fixed_t y)
   );
   return __result;
 }
-# else
+# else // Other gcc platform
 static fixed_t fixed_mul(fixed_t x, fixed_t y) {
   return (fixed_t)(((int64_t)x * y) >> FRAC_BITS);
 }
 # endif
-#endif // __GNUC__
+#elif defined(_MSC_VER) // x86 Windows
+static fixed_t fixed_mul(fixed_t x, fixed_t y) {
+  enum {
+    fracbits = FRAC_BITS
+  };
+  
+  __asm {
+    mov eax, x
+    imul y
+    shrd eax, edx, fracbits
+  }
+  // eax is returned automatically
+}
+#else // Other non-gcc platform
+static fixed_t fixed_mul(fixed_t x, fixed_t y) {
+  return (fixed_t)(((int64_t)x * y) >> FRAC_BITS);
+}
+#endif
 
 // XXX ARM version from http://me.henri.net/fp-div.html ?
 static inline fixed_t fixed_div(fixed_t x, fixed_t y) {
