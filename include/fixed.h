@@ -92,12 +92,12 @@ static inline fixed_t fixed_mul(fixed_t x, fixed_t y)
   return __result;
 }
 # else // Other gcc platform
-static fixed_t fixed_mul(fixed_t x, fixed_t y) {
+static inline fixed_t fixed_mul(fixed_t x, fixed_t y) {
   return (fixed_t)(((int64_t)x * y) >> FRAC_BITS);
 }
 # endif
 #elif defined(_MSC_VER) // x86 Windows
-static fixed_t fixed_mul(fixed_t x, fixed_t y) {
+static inline fixed_t fixed_mul(fixed_t x, fixed_t y) {
   enum {
     fracbits = FRAC_BITS
   };
@@ -110,7 +110,7 @@ static fixed_t fixed_mul(fixed_t x, fixed_t y) {
   // eax is returned automatically
 }
 #else // Other non-gcc platform
-static fixed_t fixed_mul(fixed_t x, fixed_t y) {
+static inline fixed_t fixed_mul(fixed_t x, fixed_t y) {
   return (fixed_t)(((int64_t)x * y) >> FRAC_BITS);
 }
 #endif

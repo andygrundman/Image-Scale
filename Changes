@@ -1,5 +1,8 @@
 Revision history for Image::Scale
 
+0.03    2010-09-16 18:00:00
+        - Fixed compilation on Windows.
+
 0.02    2010-09-16 17:00:00
         - Fixed crash when reading JPEG images with large Exif tags.
         - Improved fixed-point performance for x86.
