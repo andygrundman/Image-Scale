@@ -73,7 +73,7 @@ SKIP:
     open OLD_STDERR, '>&', STDERR;
     close STDERR;
     
-    my $ok = $im->resize_gd( { width => 50 } );
+    my $ok = $im->resize_gd_fixed_point( { width => 50 } );
     
     # Restore stderr
     open STDERR, '>&', OLD_STDERR;
