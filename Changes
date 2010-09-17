@@ -1,5 +1,8 @@
 Revision history for Image::Scale
 
+0.04
+        - More fixes for CPAN testers.
+
 0.03    2010-09-16 18:00:00
         - Fixed compilation on Windows.
 

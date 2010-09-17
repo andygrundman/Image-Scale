@@ -1,5 +1,7 @@
 use strict;
 
+use 5.008;
+
 # XXX better static build support
 
 use Config;
@@ -18,7 +20,7 @@ my $DEFINES = '-O2'; # I tested -funroll-loops, it is slightly slower
 $DEFINES .= ' -Wall' unless $^O =~ /sun|solaris/i;
 $DEFINES .= ' -Wno-unused-value -Wno-format-security -Winline' unless $^O =~ /Win32|sun|solaris/i;
 
-if ( $^O !~ /Win32/ ) { 
+if ( $^O !~ /Win32/i ) { 
     # Check for Sparc ReadyNAS to enable ASM code
     if ( -e '/etc/raidiator_version' ) {
         if ( $Config{archname} eq 'sparc-linux' ) {
@@ -67,7 +69,7 @@ my @check = qw(/usr/include /usr/local/include /opt/local/include);
 # Check in environment-supplied locations before standard ones
 unshift @check, split /:/, $ENV{INCLUDE};
 
-if ( $^O =~ /Win32/ ) {
+if ( $^O =~ /Win32/i ) {
     push @check, '../libjpeg-turbo-1.0.0';
     push @check, '../lpng143';
     push @check, '../giflib-4.1.6/lib';
@@ -170,7 +172,15 @@ for my $incdir ( $gif_inc, @check ) {
 
 # Require at least one of jpeg or png
 if ( !$JPEG && !$PNG ) {
-    die "Image::Scale requires at least one of libjpeg or libpng, please install one or both and try again.\n";
+    my $err = "Image::Scale requires at least one of libjpeg or libpng, please install one or both and try again.\n";
+    
+    if ( $^O =~ /Win32/i ) {
+        $err .= "\nPlease read the README.win32 file for build instructions on Windows.\n";
+    }
+    
+    warn $err;
+    
+    exit 0;
 }
 
 unshift @INC, '-I. -I.. -Isrc -Iinclude';
@@ -182,7 +192,7 @@ print "  PNG support:      " . ( $PNG ? "yes ($png_inc, version $PNG_VERSION)" :
 print "  GIF support:      " . ( $GIF ? "yes ($gif_inc, version $GIF_VERSION)" : "no, install giflib" ) . "\n";
 print "\n";
 
-if ( $^O =~ /Win32/ ) {
+if ( $^O =~ /Win32/i ) {
     *MY::postamble = sub {};
 
     if ($JPEG) {
