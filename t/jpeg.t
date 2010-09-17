@@ -48,7 +48,7 @@ for my $type ( @types ) {
 
 SKIP:
 {
-    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 88
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 44
         if $jpeg_version != 62;
         
     # Normal width resize
@@ -161,7 +161,7 @@ SKIP:
 # keep_aspect bgcolor
 SKIP:
 {
-    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 4
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 2
         if $jpeg_version != 62;
         
     for my $resize ( @resizes ) {
@@ -184,7 +184,7 @@ SKIP:
 # Exif with keep_aspect
 SKIP:
 {
-    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 84
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 42
         if $jpeg_version != 62;
         
     my @rotations = qw(
@@ -256,7 +256,7 @@ SKIP:
 # multiple resize calls on same $im object, should throw away previous resize data
 SKIP:
 {
-    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 4
+    skip "libjpeg version is $jpeg_version, skipping file comparison tests (they require v62)", 2
         if $jpeg_version != 62;
         
     for my $resize ( @resizes ) {
