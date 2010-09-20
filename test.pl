@@ -19,10 +19,10 @@ my $count = 0;
 if (1) {
     my $img = Image::Scale->new($path, { offset => $offset, length => $length } );
     
-    #$img->resize_gd( { height => $height, width => $height, keep_aspect => 1 } );
-    $img->resize_gd_fixed_point( { height => $height } );
-    #$img->resize_gm( { height => $height, width => $height, keep_aspect => 1 } );
-    #$img->resize_gm_fixed_point( { height => $height, width => $height, keep_aspect => 1 } );
+    #$img->resize_gd( { height => $height } );
+    #$img->resize_gd_fixed_point( { height => $height } );
+    #$img->resize_gm( { height => $height, filter => 'Triangle' } );
+    $img->resize_gm_fixed_point( { height => $height } );
 
     #$img->save_jpeg('resized.jpg');
     

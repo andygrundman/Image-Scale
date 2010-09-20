@@ -42,7 +42,7 @@
 #define ABS(x)  ((x) < 0 ? -(x) : (x))
 #endif
 
-#define ROUND_FLOAT_TO_INT(x) ((int)(x < 0.0 ? 0 : (x > 255.0) ? 255 : x + 0.5))
+#define ROUND_FLOAT_TO_INT(x) lrintf(x)
 
 #define EPSILON 1.0e-12
 #define PI      3.14159265358979323846264338327950288419716939937510

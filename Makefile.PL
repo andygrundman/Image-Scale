@@ -2,8 +2,6 @@ use strict;
 
 use 5.008;
 
-# XXX better static build support
-
 use Config;
 use ExtUtils::MakeMaker qw(WriteMakefile);
 use File::Spec::Functions;

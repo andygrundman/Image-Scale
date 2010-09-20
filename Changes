@@ -1,6 +1,7 @@
 Revision history for Image::Scale
 
 0.05
+        - Faster resize when image doesn't have an alpha channel.
         - Faster JPEG compression when using libjpeg-turbo.
 
 0.04    2010-09-17 15:40:00

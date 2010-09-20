@@ -36,6 +36,9 @@ image_downsize_gd(image *im)
   	  float spixels = 0;
   	  float red = 0.0, green = 0.0, blue = 0.0, alpha = 0.0;
   	  
+  	  if (!im->has_alpha)
+        alpha = 255.0;
+  	  
   	  sx1 = (float)(x - dstX) * width_scale;
   	  sx2 = (float)((x + 1) - dstX) * width_scale;
   	  sy = sy1;
@@ -83,7 +86,7 @@ image_downsize_gd(image *im)
     		    xportion = 1.0;
     		  }
     		  //DEBUG_TRACE("%.2f\n", xportion);
-  		  
+  		    
     		  pcontribution = xportion * yportion;
   		  
     		  p = get_pix(im, (int32_t)sx + srcX, (int32_t)sy + srcY);
@@ -97,7 +100,10 @@ image_downsize_gd(image *im)
     		  red   += COL_RED(p)   * pcontribution;
     		  green += COL_GREEN(p) * pcontribution;
     		  blue  += COL_BLUE(p)  * pcontribution;
-    		  alpha += COL_ALPHA(p) * pcontribution;
+    		  
+    		  if (im->has_alpha)
+    		    alpha += COL_ALPHA(p) * pcontribution;
+    		  
     		  spixels += pcontribution;
     		  sx += 1.0;
     		} while (sx < sx2);
@@ -111,14 +117,16 @@ image_downsize_gd(image *im)
 	      red   *= spixels;
 	      green *= spixels;
 	      blue  *= spixels;
-	      alpha *= spixels;
+	      
+	      if (im->has_alpha)
+	        alpha *= spixels;
 	    }
 	    
 	    /* Clamping to allow for rounding errors above */
       if (red > 255.0)   red = 255.0;
       if (green > 255.0) green = 255.0;
       if (blue > 255.0)  blue = 255.0;
-      if (alpha > 255.0) alpha = 255.0;
+      if (im->has_alpha && alpha > 255.0) alpha = 255.0;
       
       /*
       DEBUG_TRACE("  -> %d, %d %x (%d %d %d %d)\n",
@@ -135,20 +143,20 @@ image_downsize_gd(image *im)
           // 90 and 270 rotations, width/height are swapped so we have to use alternate put_pix method
           put_pix_rotated(
             im, ox, oy, im->target_height,
-            COL_FULL((int)red, (int)green, (int)blue, (int)alpha)
+            COL_FULL(ROUND_FLOAT_TO_INT(red), ROUND_FLOAT_TO_INT(green), ROUND_FLOAT_TO_INT(blue), ROUND_FLOAT_TO_INT(alpha))
           );
         }
         else {
           put_pix(
             im, ox, oy,
-            COL_FULL((int)red, (int)green, (int)blue, (int)alpha)
+            COL_FULL(ROUND_FLOAT_TO_INT(red), ROUND_FLOAT_TO_INT(green), ROUND_FLOAT_TO_INT(blue), ROUND_FLOAT_TO_INT(alpha))
           );
         }
       }
-      else { 
+      else {
         put_pix(
           im, x, y,
-          COL_FULL((int)red, (int)green, (int)blue, (int)alpha)
+          COL_FULL(ROUND_FLOAT_TO_INT(red), ROUND_FLOAT_TO_INT(green), ROUND_FLOAT_TO_INT(blue), ROUND_FLOAT_TO_INT(alpha))
         );
       }
     }
@@ -189,6 +197,9 @@ image_downsize_gd_fixed_point(image *im)
       fixed_t sx, sy;
   	  fixed_t spixels = 0;
   	  fixed_t red = 0, green = 0, blue = 0, alpha = 0;
+  	  
+  	  if (!im->has_alpha)
+        alpha = FIXED_255;
   	  
       sx1 = fixed_mul(int_to_fixed(x - dstX), width_scale);
       sx2 = fixed_mul(int_to_fixed((x + 1) - dstX), width_scale);  	  
@@ -258,7 +269,9 @@ image_downsize_gd_fixed_point(image *im)
           red   += fixed_mul(int_to_fixed(COL_RED(p)), pcontribution);
           green += fixed_mul(int_to_fixed(COL_GREEN(p)), pcontribution);
     		  blue  += fixed_mul(int_to_fixed(COL_BLUE(p)), pcontribution);
-    		  alpha += fixed_mul(int_to_fixed(COL_ALPHA(p)), pcontribution);
+    		  
+    		  if (im->has_alpha)
+    		    alpha += fixed_mul(int_to_fixed(COL_ALPHA(p)), pcontribution);
     		  
     		  spixels += pcontribution;
     		  sx += FIXED_1;
@@ -285,14 +298,16 @@ image_downsize_gd_fixed_point(image *im)
         red   = fixed_mul(red, spixels);
         green = fixed_mul(green, spixels);
         blue  = fixed_mul(blue, spixels);
-        alpha = fixed_mul(alpha, spixels);
+        
+        if (im->has_alpha)
+          alpha = fixed_mul(alpha, spixels);
 	    }
 	    
 	    /* Clamping to allow for rounding errors above */
       if (red > FIXED_255)   red = FIXED_255;
       if (green > FIXED_255) green = FIXED_255;
       if (blue > FIXED_255)  blue = FIXED_255;
-      if (alpha > FIXED_255) alpha = FIXED_255;
+      if (im->has_alpha && alpha > FIXED_255) alpha = FIXED_255;
       
       /*
       DEBUG_TRACE("  -> %d, %d %x (%d %d %d %d)\n",
@@ -319,7 +334,7 @@ image_downsize_gd_fixed_point(image *im)
           );
         }
       }
-      else { 
+      else {
         put_pix(
           im, x, y,
           COL_FULL(fixed_to_int(red), fixed_to_int(green), fixed_to_int(blue), fixed_to_int(alpha))

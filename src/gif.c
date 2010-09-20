@@ -204,6 +204,7 @@ image_gif_load(image *im)
             trans_index = ExtData[4];
           else
             trans_index = -1;
+          im->has_alpha = 1;
           DEBUG_TRACE("GIF transparency index: %d\n", trans_index);
         }
         
