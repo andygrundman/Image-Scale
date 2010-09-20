@@ -391,8 +391,9 @@ image_jpeg_load(image *im)
   strncpy(filename, SvPVX(im->path), FILENAME_LEN);
   if (sv_len(im->path) > FILENAME_LEN)
     filename[FILENAME_LEN] = 0;
-    
-  // XXX look at libjpeg-turbo colorspace extensions for faster decompression (JCS_EXT_RGBX)
+  
+  // XXX Tested libjpeg-turbo's JCS_EXT_XBGR but it writes zeros
+  // instead of FF for alpha, doesn't support CMYK, etc
   
   jpeg_start_decompress(im->cinfo);
   
@@ -445,10 +446,14 @@ image_jpeg_load(image *im)
 static void
 image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
 {
-  JSAMPROW row_pointer[1];
-  int row_stride;
+  int x;
+#ifdef JCS_EXTENSIONS
+  JSAMPROW *data = NULL;
+#else
   volatile unsigned char *data = NULL;
-  int i, x;
+  JSAMPROW row_pointer[1];
+  int i, row_stride;
+#endif
   
   cinfo->image_width      = im->target_width;
   cinfo->image_height     = im->target_height;
@@ -461,12 +466,29 @@ image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
     return;
   }
   
-  // XXX look at libjpeg-turbo colorspace extensions for faster compression (JCS_EXT_RGBX)
+#ifdef JCS_EXTENSIONS
+  // Use libjpeg-turbo support for direct reading from source buffer
+  cinfo->input_components = 4;
+  cinfo->in_color_space = JCS_EXT_XBGR;
+#endif
   
   jpeg_set_defaults(cinfo);
   jpeg_set_quality(cinfo, quality, TRUE);
   jpeg_start_compress(cinfo, TRUE);
   
+#ifdef JCS_EXTENSIONS
+  New(0, data, im->target_height, JSAMPROW);
+  
+  for (x = 0; x < im->target_height; x++)
+    data[x] = (JSAMPROW)&im->outbuf[x * im->target_width];
+  
+  while (cinfo->next_scanline < cinfo->image_height) {
+    jpeg_write_scanlines(cinfo, &data[cinfo->next_scanline],
+      cinfo->image_height - cinfo->next_scanline);
+  }
+  
+#else
+  // Normal libjpeg
   row_stride = cinfo->image_width * 3;
   New(0, data, row_stride, unsigned char);
   
@@ -481,6 +503,7 @@ image_jpeg_compress(image *im, struct jpeg_compress_struct *cinfo, int quality)
     row_pointer[0] = (unsigned char *)data;
     jpeg_write_scanlines(cinfo, row_pointer, 1);
   }
+#endif
   
   jpeg_finish_compress(cinfo);
   
