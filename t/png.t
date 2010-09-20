@@ -150,6 +150,8 @@ for my $resize ( @resizes ) {
     is( _compare( _load($outfile), "apic_gd_fixed_point_w50.png" ), 1, "PNG resize_gd_fixed_point from offset ID3 tag ok" );
 }
 
+diag("libpng version: $png_version");
+
 END {
     File::Path::rmtree($tmpdir);
 }

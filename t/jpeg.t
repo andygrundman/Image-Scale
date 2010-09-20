@@ -338,6 +338,8 @@ SKIP:
 
 # XXX progressive JPEG with/without memory_limit
 
+diag("libjpeg version: $jpeg_version");
+
 END {
     File::Path::rmtree($tmpdir);
 }
