@@ -42,6 +42,23 @@
 #define ABS(x)  ((x) < 0 ? -(x) : (x))
 #endif
 
+// MSVC does not have lrintf
+#ifdef _MSC_VER
+static inline int lrintf(float f) {
+#ifdef _M_X64
+  return (int)((f > 0.0f) ? (f + 0.5f) : (f -0.5f));
+#else
+  int i;
+  _asm {
+    fld f
+    fistp i
+  };
+  
+  return i;
+#endif
+}
+#endif
+
 #define ROUND_FLOAT_TO_INT(x) lrintf(x)
 
 #define EPSILON 1.0e-12
