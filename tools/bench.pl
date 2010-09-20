@@ -63,7 +63,10 @@ my $png = {
         $img->resize_gm_fixed_point( { width => $width } );
         $img->save_png('resize_gm_fixed_point.png') if !$saves->{resize_gm_fixed}++;
     },
-    gd_resample => sub {
+};
+
+if ( GD::Image->can('newFromPng') ) {
+    $png->{gd_resample} = sub {
         my $src = GD::Image->newFromPng($path);
         my $dst = GD::Image->new($width, $width);
         $dst->saveAlpha(1);
@@ -82,8 +85,8 @@ my $png = {
     		print $fh $dst->png;
     		close $fh;
     	}
-	},
-};
+	};
+}
 
 my $jpg = {
     resize_gd => sub {
@@ -116,7 +119,10 @@ my $jpg = {
         $img->resize_gm_fixed_point( { width => $width } );
         $img->save_jpeg('resize_gm_fixed_point.jpg') if !$saves->{resize_gm_fixed}++;
     },
-    gd_resample => sub {
+};
+
+if ( GD::Image->can('newFromJpeg') ) {
+    $jpg->{gd_resample} = sub {
         my $src = GD::Image->newFromJpeg($path);
         my $dst = GD::Image->new($width, $width);
         $dst->copyResampled(
@@ -132,7 +138,7 @@ my $jpg = {
             print $fh $dst->jpeg(90);
             close $fh;
         }
-	},
-};
+	};
+}
 
 cmpthese( -5, $path =~ /png/ ? $png : $jpg );
