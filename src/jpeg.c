@@ -330,9 +330,20 @@ image_jpeg_load(image *im)
 {
   float scale_factor;
   int x, w, h, ofs;
-  unsigned char *line[1], *ptr;
+  unsigned char *line[1], *ptr = NULL;
   
   if (setjmp(setjmp_buffer)) {
+    // See if we have partially decoded an image and hit a fatal error, but still have a usable image
+    if (ptr != NULL) {
+      Safefree(ptr);
+      ptr = NULL;
+    }
+      
+    if (im->cinfo->output_scanline > 0) {
+      DEBUG_TRACE("Fatal error but already processed %d scanlines, continuing...\n", im->cinfo->output_scanline);
+      return 1;
+    }
+      
     image_jpeg_finish(im);
     return 0;
   }

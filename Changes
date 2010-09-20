@@ -1,5 +1,10 @@
 Revision history for Image::Scale
 
+0.06
+        - JPEG: Don't abort on fatal read errors if we have already processed
+          some lines from the image. An image with blank space is better than
+          no image at all.
+
 0.05    2010-09-20 14:30:00
         - Faster resize when image doesn't have an alpha channel.
         - Faster JPEG compression when using libjpeg-turbo.

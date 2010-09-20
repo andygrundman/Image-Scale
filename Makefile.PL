@@ -14,9 +14,9 @@ my ($JPEG_VERSION, $PNG_VERSION, $GIF_VERSION);
 my ($help, $jpeg_inc, $jpeg_lib, $png_inc, $png_lib, $gif_inc, $gif_lib);
 my ($jpeg_static, $png_static, $gif_static);
 
-my $DEFINES = '-O2'; # I tested -funroll-loops, it is slightly slower
+my $DEFINES = '-O2';
 $DEFINES .= ' -Wall' unless $^O =~ /sun|solaris/i;
-$DEFINES .= ' -Wno-unused-value -Wno-format-security -Winline' unless $^O =~ /Win32|sun|solaris/i;
+$DEFINES .= ' -Wno-unused-value -Wno-format-security -Winline -ffast-math' unless $^O =~ /Win32|sun|solaris/i;
 
 if ( $^O !~ /Win32/i ) { 
     # Check for Sparc ReadyNAS to enable ASM code

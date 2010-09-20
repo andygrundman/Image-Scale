@@ -8,3 +8,4 @@ Some older versions of giflib don't have DGifGetExtensionNext, require minimum v
 Tests:
   Corrupt/invalid files in all formats, triggering longjmp's
   PNG <8-bit gray
+  JPEG invalid marker, should continue (Michael's image)
