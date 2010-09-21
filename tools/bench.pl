@@ -21,13 +21,11 @@ my $make_gm = sub {
     return ( $filter => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gm( { width => $width, filter => $filter } );
+        my $out = $type eq 'png' ? $img->as_png() : $img->as_jpeg();
         if (!$saves->{"resize_gm_$filter"}++) {
-            if ($type eq 'png') {
-                $img->save_png("resize_gm_${filter}.png");
-            }
-            else {
-                $img->save_jpeg("resize_gm_${filter}.jpg");
-            }
+            open my $fh, '>', "resize_gm_${filter}.${type}";
+            print $fh $out;
+            close $fh;
         }
     } );
 };
@@ -36,12 +34,22 @@ my $png = {
     resize_gd => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gd( { width => $width } );
-        $img->save_png('resize_gd.png') if !$saves->{resize_gd}++;
+        my $out = $img->as_png();
+        if ( !$saves->{resize_gd}++ ) {
+            open my $fh, '>', 'resize_gd.png';
+            print $fh $out;
+            close $fh;
+        }
     },
     resize_gd_fixed => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gd_fixed_point( { width => $width } );
-        $img->save_png('resize_gd_fixed_point.png') if !$saves->{resize_gd_fixed}++;
+        my $out = $img->as_png();
+        if ( !$saves->{resize_gd_fixed}++ ) {
+            open my $fh, '>', 'resize_gd_fixed_point.png';
+            print $fh $out;
+            close $fh;
+        }
     },
     #$make_gm->('Point', 'png'),
     #$make_gm->('Box', 'png'),
@@ -61,7 +69,12 @@ my $png = {
     gm_fixed => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gm_fixed_point( { width => $width } );
-        $img->save_png('resize_gm_fixed_point.png') if !$saves->{resize_gm_fixed}++;
+        my $out = $img->as_png();
+        if ( !$saves->{resize_gm_fixed}++ ) {
+            open my $fh, '>', 'resize_gm_fixed_point.png';
+            print $fh $out;
+            close $fh;
+        }
     },
 };
 
@@ -80,9 +93,11 @@ if ( GD::Image->can('newFromPng') ) {
 			$src->width, $src->height
 		);
 		
+		my $out = $dst->png;
+		
 		if ( !$saves->{gd_resample}++ ) {
     		open my $fh, '>', 'gd.png';
-    		print $fh $dst->png;
+    		print $fh $out;
     		close $fh;
     	}
 	};
@@ -92,12 +107,22 @@ my $jpg = {
     resize_gd => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gd( { width => $width } );
-        $img->save_jpeg('resize_gd.jpg') if !$saves->{resize_gd}++;
+        my $out = $img->as_jpeg();
+        if ( !$saves->{resize_gd}++ ) {
+            open my $fh, '>', 'resize_gd.jpg';
+            print $fh $out;
+            close $fh;
+        }
     },
     resize_gd_fixed => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gd_fixed_point( { width => $width } );
-        $img->save_jpeg('resize_gd_fixed_point.jpg') if !$saves->{resize_gd_fixed}++;
+        my $out = $img->as_jpeg();
+        if ( !$saves->{resize_gd_fixed}++ ) {
+            open my $fh, '>', 'resize_gd_fixed_point.jpg';
+            print $fh $out;
+            close $fh;
+        }
     },
     #$make_gm->('Point', 'jpg'),
     #$make_gm->('Box', 'jpg'),
@@ -117,7 +142,13 @@ my $jpg = {
     gm_fixed => sub {
         my $img = Image::Scale->new($path);
         $img->resize_gm_fixed_point( { width => $width } );
-        $img->save_jpeg('resize_gm_fixed_point.jpg') if !$saves->{resize_gm_fixed}++;
+        my $out = $img->as_jpeg();
+        
+        if ( !$saves->{resize_gm_fixed}++ ) {
+            open my $fh, '>', 'resize_gm_fixed_point.jpg';
+            print $fh $out;
+            close $fh;
+        }
     },
 };
 
@@ -133,9 +164,11 @@ if ( GD::Image->can('newFromJpeg') ) {
 			$src->width, $src->height
 		);
 		
+		my $out = $dst->jpeg(90);
+		
 		if (!$saves->{gd_resample}++) {
             open my $fh, '>', 'gd.jpg';
-            print $fh $dst->jpeg(90);
+            print $fh $out;
             close $fh;
         }
 	};
