@@ -15,7 +15,7 @@ if ($gif_version) {
     plan tests => 17;
 }
 else {
-    plan skip_all => 'Image::Scale not built with giflib support';
+    plan skip_all => 'Image::Scale not built with giflib/libungif support';
 }
 
 my $tmpdir = catdir( $FindBin::Bin, 'tmp' );
@@ -150,7 +150,7 @@ SKIP:
     is( _compare( _load($outfile), "apic_gd_fixed_point_w100.png" ), 1, "GIF resize_gd_fixed_point from offset ID3 tag ok" );
 }
 
-diag("giflib version: $gif_version");
+diag("giflib/libungif version: $gif_version");
 
 END {
     File::Path::rmtree($tmpdir);

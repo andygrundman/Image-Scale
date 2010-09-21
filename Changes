@@ -1,5 +1,8 @@
 Revision history for Image::Scale
 
+0.07
+        - Use libungif if giflib is not found. (Max Soulé)
+
 0.06    2010-09-20 18:40:00
         - JPEG: Don't abort on fatal read errors if we have already processed
           some lines from the image. An image with blank space is better than

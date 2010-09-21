@@ -11,7 +11,7 @@ my (@INC, @LIBPATH, @LIBS);
 my ($JPEG, $PNG, $GIF, $MYEXTLIB);
 my ($JPEG_VERSION, $PNG_VERSION, $GIF_VERSION);
 
-my ($help, $jpeg_inc, $jpeg_lib, $png_inc, $png_lib, $gif_inc, $gif_lib);
+my ($help, $jpeg_inc, $jpeg_lib, $png_inc, $png_lib, $gif_inc, $gif_lib, $gif_lib_name);
 my ($jpeg_static, $png_static, $gif_static);
 
 my $DEFINES = '-O2';
@@ -148,16 +148,28 @@ for my $incdir ( $gif_inc, @check ) {
             push @LIBPATH, '-L' . $gif_lib;
         }
         
+        # Look for libgif or libungif as a fallback
+        for my $libdir ( $gif_lib, map { (my $p = $_) =~ s,/include,/lib,; $p } @check ) {
+            if ( glob("$libdir/libgif*") ) {
+                $gif_lib_name = 'gif';
+                last;
+            }
+            elsif ( glob("$libdir/libungif*") ) {
+                $gif_lib_name = 'ungif';
+                last;
+            }
+        }
+        
         if ($gif_static) {
             if ($gif_lib) {
-                $MYEXTLIB .= $gif_lib . '/' . 'libgif$(LIB_EXT) ';
+                $MYEXTLIB .= $gif_lib . '/' . "lib${gif_lib_name}\$(LIB_EXT) ";
             }
             else {
-                $MYEXTLIB .= $gif_inc . '/../lib/libgif$(LIB_EXT) ';
+                $MYEXTLIB .= $gif_inc . "/../lib/lib${gif_lib_name}\$(LIB_EXT) ";
             }
         }
         else {
-            push @LIBS, '-lgif';
+            push @LIBS, "-l${gif_lib_name}";
         }
         
         $GIF_VERSION = _re_find( catfile($incdir, 'gif_lib.h'), qr/GIF_LIB_VERSION\s+" Version ([\d\.]+)/ ) || 'unknown';
@@ -187,7 +199,7 @@ print "\n";
 print "Image::Scale will be built with:\n\n";
 print "  JPEG support:     " . ( $JPEG ? "yes ($jpeg_inc, version $JPEG_VERSION)" : "no, install libjpeg (v8 recommended)" ) . "\n";
 print "  PNG support:      " . ( $PNG ? "yes ($png_inc, version $PNG_VERSION)" : "no, install libpng (v1.4.x recommended)" ) . "\n";
-print "  GIF support:      " . ( $GIF ? "yes ($gif_inc, version $GIF_VERSION)" : "no, install giflib" ) . "\n";
+print "  GIF support:      " . ( $GIF ? "yes ($gif_inc, version $GIF_VERSION, lib${gif_lib_name})" : "no, install giflib or libungif" ) . "\n";
 print "\n";
 
 if ( $^O =~ /Win32/i ) {
