@@ -475,7 +475,7 @@ image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy)
       *oy = im->target_width - 1 - x;
       break;
     default:
-      if (x == 0 && y == 0)
+      if (x == 0 && y == 0 && im->orientation != 0) // An invalid orientation of 0 is often seen in non-rotated images
         warn("Image::Scale cannot rotate, unknown orientation value: %d (%s)\n", im->orientation, SvPVX(im->path));
       *ox = x;
       *oy = y;
