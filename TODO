@@ -4,6 +4,9 @@ Small memory leak in giflib
 BMP RLE support
 BMP OS/2 format support
 Some older versions of giflib don't have DGifGetExtensionNext, require minimum version
+Transparent SBS icons get a transparent background with gd_fixed for some reason
+Remove GM code, the filters are wrong and it's not faster anyway
+Display the filename even if passing in raw data (embedded images)
 
 Tests:
   Corrupt/invalid files in all formats, triggering longjmp's

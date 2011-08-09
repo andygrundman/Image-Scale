@@ -2,6 +2,10 @@ Revision history for Image::Scale
 
 0.07
         - Use libungif if giflib is not found. (Max Soulé)
+        - Fix build issue when building a non-x86 version using libjpeg-turbo's
+          header file.
+        - Hide orientation warning when EXIF orientation value is 0 (invalid but
+          common for some reason).
 
 0.06    2010-09-20 18:40:00
         - JPEG: Don't abort on fatal read errors if we have already processed

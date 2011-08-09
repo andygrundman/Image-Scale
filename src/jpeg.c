@@ -17,6 +17,12 @@
 #define LE 0     // Exif byte orders
 #define BE 1
 
+// Force JCS_EXTENSIONS to off for non-x86 platforms, the way we build our
+// i386+ppc OSX binary needs this
+#ifndef __i386__
+# undef JCS_EXTENSIONS
+#endif
+
 // Unfortunately we need a global variable in order to display the filename
 // during libjpeg output messages
 #define FILENAME_LEN 255

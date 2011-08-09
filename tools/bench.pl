@@ -14,7 +14,7 @@ my $saves = {};
 
 warn "Benchmarking $path resized to $width...\n";
 
-my $jpg = $path =~ /jpe?g/ ? 1 : 0;
+my $jpg = $path =~ /jpe?g/i ? 1 : 0;
 
 my $tests = {
     resize_gd => sub {
