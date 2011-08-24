@@ -11,12 +11,16 @@ Be sure to run C:\Program Files\Microsoft Visual Studio 8\vc\vcvarsall.bat
 
 Requires cygwin installed with GNU make.
 
-* Download libjpeg-turbo-1.0.0.tar.gz
-  NOTE: The vc.exe version only contains a DLL not a static library.
-* Extract to ../libjpeg-turbo-1.0.0
-* Download and install nasm.  Copy nasm.exe to the libjpeg-turbo-1.0.0 dir.
-* Run: make -f win/Makefile
-* Static library will be in windows/jpeg-static.lib
+* Download libjpeg-turbo-1.1.1.tar.gz
+  NOTE: The vc.exe version only contains a DLL not a static library, so it can't be used.
+* Extract to ../libjpeg-turbo-1.1.1
+* Download and install nasm. Make sure it's in the path.
+* Download and install cmake.
+* mkdir build
+* cd build
+* cmake -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+* nmake
+* Static library will be at jpeg-static.lib
 
 2. Build zlib (with x86 ASM)
 

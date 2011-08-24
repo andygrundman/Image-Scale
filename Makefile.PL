@@ -68,7 +68,7 @@ my @check = qw(/usr/include /usr/local/include /opt/local/include);
 unshift @check, split /:/, $ENV{INCLUDE};
 
 if ( $^O =~ /Win32/i ) {
-    push @check, '../libjpeg-turbo-1.0.0';
+    push @check, '../libjpeg-turbo-1.1.1';
     push @check, '../lpng143';
     push @check, '../giflib-4.1.6/lib';
 }
@@ -96,7 +96,12 @@ for my $incdir ( $jpeg_inc, @check ) {
             push @LIBS, '-ljpeg';
         }
         
-        $JPEG_VERSION = _re_find( catfile($incdir, 'jpeglib.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
+        if ( $^O =~ /Win32/i ) {
+            $JPEG_VERSION = _re_find( catfile($incdir, 'build', 'jconfig.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
+        }
+        else {
+            $JPEG_VERSION = _re_find( catfile($incdir, 'jpeglib.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
+        }
         
         $DEFINES .= " -DHAVE_JPEG -DJPEG_VERSION=$JPEG_VERSION";
         
@@ -206,8 +211,8 @@ if ( $^O =~ /Win32/i ) {
     *MY::postamble = sub {};
 
     if ($JPEG) {
-        push @INC, '-I../libjpeg-turbo-1.0.0/win'; # for jconfig.h
-        $MYEXTLIB .= '../libjpeg-turbo-1.0.0/windows/jpeg-static.lib ';
+        push @INC, '-I../libjpeg-turbo-1.1.1/build'; # for jconfig.h
+        $MYEXTLIB .= '../libjpeg-turbo-1.1.1/build/jpeg-static.lib ';
     }
     
     if ($PNG) {

@@ -67,6 +67,7 @@ t/images/jpg/v2.4-apic-jpg-351-2103.mp3
 t/images/png/gray.png
 t/images/png/gray_alpha.png
 t/images/png/gray_interlaced.png
+t/images/png/height1.png
 t/images/png/palette.png
 t/images/png/palette_alpha.png
 t/images/png/palette_bkgd.png
@@ -171,6 +172,7 @@ t/ref/png/apic_gd_fixed_point_w50.png
 t/ref/png/gray_alpha_resize_gd_fixed_point_w100.png
 t/ref/png/gray_interlaced_resize_gd_fixed_point_w100.png
 t/ref/png/gray_resize_gd_fixed_point_w100.png
+t/ref/png/height1_resize_gd_fixed_point_w100.png
 t/ref/png/palette_alpha_resize_gd_fixed_point_w100.png
 t/ref/png/palette_resize_gd_fixed_point_w100.png
 t/ref/png/rgb_resize_gd_fixed_point_w100.png

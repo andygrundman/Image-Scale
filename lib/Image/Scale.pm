@@ -7,7 +7,7 @@ use constant IMAGE_SCALE_TYPE_GD_FIXED => 1;
 use constant IMAGE_SCALE_TYPE_GM       => 2;
 use constant IMAGE_SCALE_TYPE_GM_FIXED => 3;
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 require XSLoader;
 XSLoader::load('Image::Scale', $VERSION);
