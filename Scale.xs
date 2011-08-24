@@ -158,10 +158,14 @@ CODE:
   if (!im->target_height) {
     // Only width was specified
     im->target_height = (int)((float)im->height / im->width * im->target_width);
+    if (im->target_height < 1)
+      im->target_height = 1;
   }
   else if (!im->target_width) {
     // Only height was specified
     im->target_width = (int)((float)im->width / im->height * im->target_height);
+    if (im->target_width < 1)
+      im->target_width = 1;
   }
   
   DEBUG_TRACE("Resizing from %d x %d -> %d x %d\n", im->width, im->height, im->target_width, im->target_height);

@@ -1,6 +1,7 @@
 Revision history for Image::Scale
 
-0.07
+0.07    2011-08-24
+        - Protect against resizing to a 0-width or 0-height image.
         - Use libungif if giflib is not found. (Max Soulé)
         - Fix build issue when building a non-x86 version using libjpeg-turbo's
           header file.

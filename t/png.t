@@ -13,7 +13,7 @@ use Image::Scale;
 my $png_version = Image::Scale->png_version();
 
 if ($png_version) {
-    plan tests => 45;
+    plan tests => 46;
 }
 else {
     plan skip_all => 'Image::Scale not built with libpng support';
@@ -148,6 +148,18 @@ for my $resize ( @resizes ) {
     $im->save_png($outfile);
     
     is( _compare( _load($outfile), "apic_gd_fixed_point_w50.png" ), 1, "PNG resize_gd_fixed_point from offset ID3 tag ok" );
+}
+
+# 1-height image that would previously try to resize to 0-height
+{
+    my $dataref = _load( _f("height1.png") );
+    
+    my $outfile = _tmp("height1_resize_gd_fixed_point_w100.png");
+    my $im = Image::Scale->new($dataref);
+    $im->resize_gd_fixed_point( { width => 100 } );
+    $im->save_png($outfile);
+    
+    is( _compare( _load($outfile), "height1_resize_gd_fixed_point_w100.png" ), 1, "PNG 1-height resize ok" );
 }
 
 diag("libpng version: $png_version");
