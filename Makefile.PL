@@ -101,6 +101,10 @@ for my $incdir ( $jpeg_inc, @check ) {
         }
         else {
             $JPEG_VERSION = _re_find( catfile($incdir, 'jpeglib.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
+            if ( $JPEG_VERSION eq 'unknown' ) {
+                # Also check jconfig.h as it contains the version when using libjpeg-turbo
+                $JPEG_VERSION = _re_find( catfile($incdir, 'jconfig.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
+            }
         }
         
         $DEFINES .= " -DHAVE_JPEG -DJPEG_VERSION=$JPEG_VERSION";
@@ -154,7 +158,7 @@ for my $incdir ( $gif_inc, @check ) {
         }
         
         # Look for libgif or libungif as a fallback
-        for my $libdir ( $gif_lib, map { (my $p = $_) =~ s,/include,/lib,; $p } @check ) {
+        for my $libdir ( $gif_lib, map { (my $p = $_) =~ s,/include,/lib,; $p } $gif_inc, @check ) {
             if ( glob("$libdir/libgif*") ) {
                 $gif_lib_name = 'gif';
                 last;

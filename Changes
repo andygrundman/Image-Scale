@@ -1,5 +1,9 @@
 Revision history for Image::Scale
 
+0.09
+        - Fixed JPEG version detection for libjpeg-turbo.
+        - Fixed GIF library detection when using only --with-gif-includes switch.
+
 0.08    2011-08-24
         - Forgot to add some new test files to the manifest.
         - Updated the Makefile and Win32 instructions to use libjpeg-turbo-1.1.1.
