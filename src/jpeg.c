@@ -391,8 +391,10 @@ image_jpeg_load(image *im)
   scale_factor = (float)im->cinfo->output_width / im->target_width;
   if (scale_factor > ((float)im->cinfo->output_height / im->target_height))
     scale_factor = (float)im->cinfo->output_height / im->target_height;
-  im->cinfo->scale_denom *= (unsigned int)scale_factor;
-  jpeg_calc_output_dimensions(im->cinfo);
+  if (scale_factor > 1) { // Avoid divide by 0
+    im->cinfo->scale_denom *= (unsigned int)scale_factor;
+    jpeg_calc_output_dimensions(im->cinfo);
+  }
   
   w = im->cinfo->output_width;
   h = im->cinfo->output_height;

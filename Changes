@@ -1,6 +1,7 @@
 Revision history for Image::Scale
 
 0.09
+        - Bug 17573, fixed several places where we could divide by 0.
         - Fixed JPEG version detection for libjpeg-turbo.
         - Fixed GIF library detection when using only --with-gif-includes switch.
 

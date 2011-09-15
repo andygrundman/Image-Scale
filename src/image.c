@@ -335,10 +335,14 @@ image_resize(image *im)
     if (source_ar >= dest_ar) {
       im->height_padding = (int)((im->target_height - (im->target_width / source_ar)) / 2);
       im->height_inner   = (int)(im->target_width / source_ar);
+      if (im->height_inner < 1) // Avoid divide by 0
+        im->height_inner = 1;
     }
     else {
       im->width_padding = (int)((im->target_width - (im->target_height * source_ar)) / 2);
       im->width_inner   = (int)(im->target_height * source_ar);
+      if (im->width_inner < 1) // Avoid divide by 0
+        im->width_inner = 1;
     }
     
     // Fill new space with the bgcolor or zeros
