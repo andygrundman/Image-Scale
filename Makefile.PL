@@ -25,6 +25,8 @@ if ( $^O !~ /Win32/i ) {
             $DEFINES .= ' -DPADRE';
         }
     }
+    
+    push @LIBPATH, '-L/usr/local/lib';
 }
 
 my $result = GetOptions(
