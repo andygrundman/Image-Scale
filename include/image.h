@@ -64,10 +64,10 @@ static inline int lrintf(float f) {
 #define EPSILON 1.0e-12
 #define PI      3.14159265358979323846264338327950288419716939937510
 
-#ifdef _MSC_VER
-#define ARGUNUSED(arg) arg
-#else
+#if defined(__GNUC__)
 #define ARGUNUSED(arg) arg __attribute__((unused))
+#else
+#define ARGUNUSED(arg) arg
 #endif
 
 typedef uint32_t pix;
