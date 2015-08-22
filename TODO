@@ -13,3 +13,11 @@ Tests:
   Corrupt/invalid files in all formats, triggering longjmp's
   PNG <8-bit gray
   JPEG invalid marker, should continue (Michael's image)
+
+Research other image libraries:
+  http://gmic.eu/ (based on http://cimg.eu/)
+  https://www.lrde.epita.fr/wiki/Olena
+  http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS
+  http://core.tcl.tk/akupries/crimp/wiki?name=References
+
+Update benchmarks, include memory benchmarks.
