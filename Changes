@@ -1,6 +1,13 @@
 Revision history for Image::Scale
 
-0.09
+0.10    2015-08-23
+        - GIF support now requires giflib >= 4.2.0, due to API changes.
+          libungif is no longer supported. (RT #101679)
+        - Fixed call to png_memcpy no longer working (RT #89927)
+        - Point at new GitHub repo.
+        - Added a talk I recently gave at work.
+
+0.09    (unreleased)
         - Bug 17573, fixed several places where we could divide by 0.
         - Fixed JPEG version detection for libjpeg-turbo.
         - Fixed GIF library detection when using only --with-gif-includes switch.
