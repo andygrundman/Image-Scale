@@ -15,7 +15,7 @@ if ($gif_version) {
     plan tests => 18;
 }
 else {
-    plan skip_all => 'Image::Scale not built with giflib/libungif support';
+    plan skip_all => 'Image::Scale not built with giflib support';
 }
 
 my $tmpdir = catdir( $FindBin::Bin, 'tmp' );
@@ -164,7 +164,7 @@ SKIP:
     is( _compare( _load($outfile), "bug17573-thin_gd_fixed_point_w40.png" ), 1, "GIF resize_gd_fixed_point from thin image ok" );
 }
 
-diag("giflib/libungif version: $gif_version");
+diag("giflib version: $gif_version");
 
 END {
     File::Path::rmtree($tmpdir);

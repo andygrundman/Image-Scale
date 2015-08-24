@@ -11,7 +11,7 @@ my (@INC, @LIBPATH, @LIBS);
 my ($JPEG, $PNG, $GIF, $MYEXTLIB);
 my ($JPEG_VERSION, $PNG_VERSION, $GIF_VERSION);
 
-my ($help, $jpeg_inc, $jpeg_lib, $png_inc, $png_lib, $gif_inc, $gif_lib, $gif_lib_name);
+my ($help, $jpeg_inc, $jpeg_lib, $png_inc, $png_lib, $gif_inc, $gif_lib);
 my ($jpeg_static, $png_static, $gif_static);
 
 my $DEFINES = '-O2';
@@ -151,7 +151,6 @@ for my $incdir ( $png_inc, @check ) {
 # Look for libgif
 for my $incdir ( $gif_inc, @check ) {
     if ( $incdir && -e catfile($incdir, 'gif_lib.h') ) {
-        $GIF = 1;
         $gif_inc = $incdir;
         
         push @INC, '-I' . $gif_inc;
@@ -159,33 +158,28 @@ for my $incdir ( $gif_inc, @check ) {
             push @LIBPATH, '-L' . $gif_lib;
         }
         
-        # Look for libgif or libungif as a fallback
-        for my $libdir ( $gif_lib, map { (my $p = $_) =~ s,/include,/lib,; $p } $gif_inc, @check ) {
-            if ( glob("$libdir/libgif*") ) {
-                $gif_lib_name = 'gif';
-                last;
-            }
-            elsif ( glob("$libdir/libungif*") ) {
-                $gif_lib_name = 'ungif';
-                last;
-            }
-        }
-        
         if ($gif_static) {
             if ($gif_lib) {
-                $MYEXTLIB .= $gif_lib . '/' . "lib${gif_lib_name}\$(LIB_EXT) ";
+                $MYEXTLIB .= $gif_lib . '/' . "libgif\$(LIB_EXT) ";
             }
             else {
-                $MYEXTLIB .= $gif_inc . "/../lib/lib${gif_lib_name}\$(LIB_EXT) ";
+                $MYEXTLIB .= $gif_inc . "/../lib/libgif\$(LIB_EXT) ";
             }
         }
         else {
-            push @LIBS, "-l${gif_lib_name}";
+            push @LIBS, "-lgif";
         }
         
-        $GIF_VERSION = _re_find( catfile($incdir, 'gif_lib.h'), qr/GIF_LIB_VERSION\s+" Version ([\d\.]+)/ ) || 'unknown';
+        my $GIF_MAJOR = _re_find( catfile($incdir, 'gif_lib.h'), qr/GIFLIB_MAJOR (\d+)/ );
+        my $GIF_MINOR = _re_find( catfile($incdir, 'gif_lib.h'), qr/GIFLIB_MINOR (\d+)/ );
         
-        $DEFINES .= " -DHAVE_GIF -DGIF_VERSION=$GIF_VERSION";
+        if ( $GIF_MAJOR ) {
+            $GIF_VERSION = "${GIF_MAJOR}.${GIF_MINOR}";
+            if ( $GIF_VERSION >= 4.2 ) {
+                $GIF = 1;
+                $DEFINES .= " -DHAVE_GIF -DGIF_VERSION=$GIF_VERSION";
+            }
+        }
         
         last;
     }
@@ -208,9 +202,9 @@ unshift @INC, '-I. -I.. -Isrc -Iinclude';
 
 print "\n";
 print "Image::Scale will be built with:\n\n";
-print "  JPEG support:     " . ( $JPEG ? "yes ($jpeg_inc, version $JPEG_VERSION)" : "no, install libjpeg (v8 recommended)" ) . "\n";
-print "  PNG support:      " . ( $PNG ? "yes ($png_inc, version $PNG_VERSION)" : "no, install libpng (v1.4.x recommended)" ) . "\n";
-print "  GIF support:      " . ( $GIF ? "yes ($gif_inc, version $GIF_VERSION, lib${gif_lib_name})" : "no, install giflib or libungif" ) . "\n";
+print "  JPEG support:     " . ( $JPEG ? "yes ($jpeg_inc, libjpeg version $JPEG_VERSION)" : "no, install libjpeg (v8 recommended)" ) . "\n";
+print "  PNG support:      " . ( $PNG ? "yes ($png_inc, libpng version $PNG_VERSION)" : "no, install libpng (v1.4.x recommended)" ) . "\n";
+print "  GIF support:      " . ( $GIF ? "yes ($gif_inc, giflib version $GIF_VERSION)" : "no, install giflib 4.2 or higher" ) . "\n";
 print "\n";
 
 if ( $^O =~ /Win32/i ) {

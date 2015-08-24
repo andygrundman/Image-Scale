@@ -58,7 +58,6 @@ image_gif_read_header(image *im)
   im->gif = DGifOpen(im, image_gif_read_buf);
   
   if (im->gif == NULL) {
-    PrintGifError();
     warn("Image::Scale unable to open GIF file (%s)\n", SvPVX(im->path));
     image_gif_finish(im);
     return 0;
@@ -108,8 +107,7 @@ image_gif_load(image *im)
   
   do { 
     if (DGifGetRecordType(im->gif, &RecordType) == GIF_ERROR) {
-      PrintGifError();
-      warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+      warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
       image_gif_finish(im);
       return 0;
     }
@@ -117,8 +115,7 @@ image_gif_load(image *im)
     switch (RecordType) {
       case IMAGE_DESC_RECORD_TYPE:      
         if (DGifGetImageDesc(im->gif) == GIF_ERROR) {
-          PrintGifError();
-          warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+          warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
           image_gif_finish(im);
           return 0;
         }
@@ -148,8 +145,7 @@ image_gif_load(image *im)
             for (x = InterlacedOffset[i]; x < im->height; x += InterlacedJumps[i]) {
               ofs = x * im->width;
               if (DGifGetLine(im->gif, line, 0) != GIF_OK) {
-                PrintGifError();
-                warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+                warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
                 image_gif_finish(im);
                 return 0;
               }
@@ -170,8 +166,7 @@ image_gif_load(image *im)
           ofs = 0;
           for (x = 0; x < im->height; x++) {
             if (DGifGetLine(im->gif, line, 0) != GIF_OK) {
-              PrintGifError();
-              warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+              warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
               image_gif_finish(im);
               return 0;
             }
@@ -193,8 +188,7 @@ image_gif_load(image *im)
       
       case EXTENSION_RECORD_TYPE:
         if (DGifGetExtension(im->gif, &temp_save.Function, &ExtData) == GIF_ERROR) {
-          PrintGifError();
-          warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
+          warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
           image_gif_finish(im);
           return 0;
         }
@@ -211,14 +205,12 @@ image_gif_load(image *im)
         while (ExtData != NULL) {
           /* Create an extension block with our data */
           if (AddExtensionBlock(&temp_save, ExtData[0], &ExtData[1]) == GIF_ERROR) {
-            PrintGifError();
             warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
             image_gif_finish(im);
             return 0;
           }
 
           if (DGifGetExtensionNext(im->gif, &ExtData) == GIF_ERROR) {
-            PrintGifError();
             warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
             image_gif_finish(im);
             return 0;
@@ -242,8 +234,7 @@ image_gif_finish(image *im)
 {
   if (im->gif != NULL) {
     if (DGifCloseFile(im->gif) != GIF_OK) {
-      PrintGifError();
-      warn("Image::Scale unable to close GIF file (%s)\n", SvPVX(im->path));
+      warn("Image::Scale unable to close GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
     }
     im->gif = NULL;
     
