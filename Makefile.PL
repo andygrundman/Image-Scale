@@ -239,6 +239,16 @@ WriteMakefile(
     DEFINE            => $DEFINES,
     MYEXTLIB          => $MYEXTLIB,
     depend            => { 'Scale.c' => "$inc_files $src_files" },
+    META_MERGE => {
+        'meta-spec' => { version => 2 },
+        resources => {
+            repository => {
+                type => 'git',
+                url  => 'https://github.com/andygrundman/Image-Scale.git',
+                web  => 'https://github.com/andygrundman/Image-Scale',
+            },
+        },
+    },
 );
 
 sub _re_find {
