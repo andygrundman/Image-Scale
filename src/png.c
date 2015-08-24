@@ -40,7 +40,7 @@ image_png_read_buf(png_structp png_ptr, png_bytep data, png_size_t len)
     }
  }
 
- png_memcpy(data, buffer_ptr(im->buf), len);
+ memcpy(data, buffer_ptr(im->buf), len);
  buffer_consume(im->buf, len);
  
  goto ok;
