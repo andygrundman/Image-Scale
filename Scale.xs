@@ -19,6 +19,8 @@
 
 MODULE = Image::Scale		PACKAGE = Image::Scale
 
+PROTOTYPES: ENABLE
+
 void
 __init(HV *self)
 PPCODE:
