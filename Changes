@@ -1,6 +1,6 @@
 Revision history for Image::Scale
 
-0.11    
+0.11    2015-10-07
         - Added $img->resized_height() and $img->resized_width() accessors that
           return the post-resize dimensions of the image. This can be useful if you 
           only specified one dimension and need to know the other dimension that 
