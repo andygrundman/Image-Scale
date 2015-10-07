@@ -1,6 +1,10 @@
 Revision history for Image::Scale
 
 0.11    
+        - Added $img->resized_height() and $img->resized_width() accessors that
+          return the post-resize dimensions of the image. This can be useful if you 
+          only specified one dimension and need to know the other dimension that 
+          was calculated by the module. (RT #80269)
         - Changed ARM fixed_mul assembly code to not round the result, in order to
           match the output from x86 and C versions and pass the tests. (RT #93417)
         - Fixed GIF compilation when using giflib >= 5.0. (RT #106749)

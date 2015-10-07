@@ -11,7 +11,7 @@ use Image::Scale;
 my $jpeg_version = Image::Scale->jpeg_version();
 
 if ($jpeg_version) {
-    plan tests => 112;
+    plan tests => 116;
 }
 else {
     plan skip_all => 'Image::Scale not built with libjpeg support';
@@ -44,6 +44,18 @@ for my $type ( @types ) {
     
     is( $im->width, 313, "JPEG $type width ok" );
     is( $im->height, 234, "JPEG $type height ok" );
+}
+
+# Test resized height/width
+{
+    my $im = Image::Scale->new( _f("rgb.jpg") );
+    is( $im->resized_width, 0, "JPEG resized_width is 0 before resize" );
+    is( $im->resized_height, 0, "JPEG resized_height is 0 before resize" );
+    
+    $im->resize_gd( { width => 50, height => 50 } );
+    
+    is( $im->resized_width, 50, "JPEG resized_width ok" );
+    is( $im->resized_height, 50, "JPEG resized_height ok" );
 }
 
 SKIP:

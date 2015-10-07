@@ -154,6 +154,16 @@ Returns the width of the original source image.
 
 Returns the height of the original source image.
 
+=head2 resized_width()
+
+Returns the resized width from the last call to resize_*(). Returns 0 if no
+resize function has been called yet.
+
+=head2 resized_height()
+
+Returns the resized height from the last call to resize_*(). Returns 0 if no
+resize function has been called yet.
+
 =head2 resize( \%OPTIONS )
 
 resize() uses the default resize algorithm, which is resize_gd_fixed_point.  See below

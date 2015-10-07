@@ -65,6 +65,28 @@ OUTPUT:
   RETVAL
 
 int
+resized_width(HV *self)
+CODE:
+{
+  image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
+
+  RETVAL = im->target_width;
+}
+OUTPUT:
+  RETVAL
+
+int
+resized_height(HV *self)
+CODE:
+{
+  image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
+
+  RETVAL = im->target_height;
+}
+OUTPUT:
+  RETVAL
+
+int
 resize(HV *self, HV *opts)
 CODE:
 {
