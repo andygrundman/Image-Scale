@@ -52,7 +52,7 @@ static inline fixed_t fixed_mul(fixed_t x, fixed_t y) {
   __asm__ __volatile__(
     "smull %0, %1, %3, %4\n\t"
     "movs %0, %0, lsr %5\n\t"
-    "adc %2, %0, %1, lsl %6"
+    "add %2, %0, %1, lsl %6"
     : "=&r" (__lo), "=&r" (__hi), "=r" (__result)
     : "%r" (x), "r" (y), "M" (FRAC_BITS), "M" (32 - (FRAC_BITS))
     : "cc"

@@ -1,7 +1,9 @@
 Revision history for Image::Scale
 
 0.11    
-        - Fixed GIF compilation when using giflib >= 5.0.
+        - Changed ARM fixed_mul assembly code to not round the result, in order to
+          match the output from x86 and C versions and pass the tests. (RT #93417)
+        - Fixed GIF compilation when using giflib >= 5.0. (RT #106749)
         - Compilation fixes for newer OSX versions.
         - Point at new GitHub repo.
 
