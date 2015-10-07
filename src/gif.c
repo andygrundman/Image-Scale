@@ -55,7 +55,11 @@ image_gif_read_buf(GifFileType *gif, GifByteType *data, int len)
 int
 image_gif_read_header(image *im)
 {
+#ifdef GIFLIB_API_50
+  im->gif = DGifOpen(im, image_gif_read_buf, NULL);
+#else
   im->gif = DGifOpen(im, image_gif_read_buf);
+#endif
   
   if (im->gif == NULL) {
     warn("Image::Scale unable to open GIF file (%s)\n", SvPVX(im->path));
@@ -75,6 +79,7 @@ image_gif_load(image *im)
   int x, y, ofs;
   GifRecordType RecordType;
   GifPixelType *line = NULL;
+  int ExtFunction = 0;
   GifByteType *ExtData;
   SavedImage *sp;
   SavedImage temp_save;
@@ -107,7 +112,7 @@ image_gif_load(image *im)
   
   do { 
     if (DGifGetRecordType(im->gif, &RecordType) == GIF_ERROR) {
-      warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
+      warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
       image_gif_finish(im);
       return 0;
     }
@@ -115,7 +120,7 @@ image_gif_load(image *im)
     switch (RecordType) {
       case IMAGE_DESC_RECORD_TYPE:      
         if (DGifGetImageDesc(im->gif) == GIF_ERROR) {
-          warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
+          warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
           image_gif_finish(im);
           return 0;
         }
@@ -145,7 +150,7 @@ image_gif_load(image *im)
             for (x = InterlacedOffset[i]; x < im->height; x += InterlacedJumps[i]) {
               ofs = x * im->width;
               if (DGifGetLine(im->gif, line, 0) != GIF_OK) {
-                warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
+                warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
                 image_gif_finish(im);
                 return 0;
               }
@@ -166,7 +171,7 @@ image_gif_load(image *im)
           ofs = 0;
           for (x = 0; x < im->height; x++) {
             if (DGifGetLine(im->gif, line, 0) != GIF_OK) {
-              warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
+              warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
               image_gif_finish(im);
               return 0;
             }
@@ -187,13 +192,13 @@ image_gif_load(image *im)
         break;
       
       case EXTENSION_RECORD_TYPE:
-        if (DGifGetExtension(im->gif, &temp_save.Function, &ExtData) == GIF_ERROR) {
-          warn("Image::Scale unable to read GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
+        if (DGifGetExtension(im->gif, &ExtFunction, &ExtData) == GIF_ERROR) {
+          warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
           image_gif_finish(im);
           return 0;
         }
         
-        if (temp_save.Function == 0xF9) { // transparency info
+        if (ExtFunction == 0xF9) { // transparency info
           if (ExtData[1] & 1)
             trans_index = ExtData[4];
           else
@@ -204,7 +209,12 @@ image_gif_load(image *im)
         
         while (ExtData != NULL) {
           /* Create an extension block with our data */
+#ifdef GIFLIB_API_50
+          if (GifAddExtensionBlock(&im->gif->ExtensionBlockCount, &im->gif->ExtensionBlocks, ExtFunction, ExtData[0], &ExtData[1]) == GIF_ERROR) {
+#else
+          temp_save.Function = ExtFunction;
           if (AddExtensionBlock(&temp_save, ExtData[0], &ExtData[1]) == GIF_ERROR) {
+#endif
             warn("Image::Scale unable to read GIF file (%s)\n", SvPVX(im->path));
             image_gif_finish(im);
             return 0;
@@ -216,7 +226,7 @@ image_gif_load(image *im)
             return 0;
           }
           
-          temp_save.Function = 0;
+          ExtFunction = 0; // CONTINUE_EXT_FUNC_CODE
         }
         break;
         
@@ -233,8 +243,12 @@ void
 image_gif_finish(image *im)
 {
   if (im->gif != NULL) {
+#ifdef GIFLIB_API_51
+    if (DGifCloseFile(im->gif, NULL) != GIF_OK) {
+#else
     if (DGifCloseFile(im->gif) != GIF_OK) {
-      warn("Image::Scale unable to close GIF file (%s): %s\n", SvPVX(im->path), GifErrorString());
+#endif
+      warn("Image::Scale unable to close GIF file (%s)\n", SvPVX(im->path));
     }
     im->gif = NULL;
     

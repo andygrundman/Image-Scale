@@ -1,6 +1,8 @@
 Revision history for Image::Scale
 
 0.11    
+        - Fixed GIF compilation when using giflib >= 5.0.
+        - Compilation fixes for newer OSX versions.
         - Point at new GitHub repo.
 
 0.10    2015-08-23

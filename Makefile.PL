@@ -81,9 +81,9 @@ for my $incdir ( $jpeg_inc, @check ) {
         $JPEG = 1;
         $jpeg_inc = $incdir;
         
-        push @INC, '-I' . $jpeg_inc;
+        unshift @INC, '-I' . $jpeg_inc;
         if ($jpeg_lib) {
-            push @LIBPATH, '-L' . $jpeg_lib;
+            unshift @LIBPATH, '-L' . $jpeg_lib;
         }
         
         if ($jpeg_static) {
@@ -121,9 +121,9 @@ for my $incdir ( $png_inc, @check ) {
         $PNG = 1;
         $png_inc = $incdir;
         
-        push @INC, '-I' . $png_inc;
+        unshift @INC, '-I' . $png_inc;
         if ($png_lib) {
-            push @LIBPATH, '-L' . $png_lib;
+            unshift @LIBPATH, '-L' . $png_lib;
         }
         
         if ($png_static) {
@@ -148,14 +148,14 @@ for my $incdir ( $png_inc, @check ) {
     }
 }
 
-# Look for libgif
+# Look for giflib
 for my $incdir ( $gif_inc, @check ) {
     if ( $incdir && -e catfile($incdir, 'gif_lib.h') ) {
         $gif_inc = $incdir;
         
-        push @INC, '-I' . $gif_inc;
+        unshift @INC, '-I' . $gif_inc;
         if ($gif_lib) {
-            push @LIBPATH, '-L' . $gif_lib;
+            unshift @LIBPATH, '-L' . $gif_lib;
         }
         
         if ($gif_static) {
@@ -178,6 +178,16 @@ for my $incdir ( $gif_inc, @check ) {
             if ( $GIF_VERSION >= 4.2 ) {
                 $GIF = 1;
                 $DEFINES .= " -DHAVE_GIF -DGIF_VERSION=$GIF_VERSION";
+                
+                # giflib >= 5.1 changes DGifClose()
+                if ( $GIF_VERSION >= 5.1 ) {
+                    $DEFINES .= " -DGIFLIB_API_51";
+                }
+                
+                # giflib >= 5.0 change DGifOpen(), GifErrorString(), GifAddExtensionBlock() and struct SavedImage
+                if ( $GIF_VERSION >= 5.0 ) {
+                    $DEFINES .= " -DGIFLIB_API_50";
+                }
             }
         }
         
