@@ -5,6 +5,9 @@ use Config;
 if ( $Config{myarchname} =~ /i386/ ) {
     my $arch;
     
+    # This seems obsolete with recent OSX versions, which no longer have a /Developer dir.
+    return 0 unless -d '/Developer';
+
     # Match arch options with the running perl
     if ( my @archs = $Config{ccflags} =~ /-arch ([^ ]+)/g ) {
         $arch = join( '', map { "-arch $_ " } @archs );
