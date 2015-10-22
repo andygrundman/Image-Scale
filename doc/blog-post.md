@@ -32,18 +32,24 @@ On a modern Intel CPU, you would expect the floating-point version to be as fast
 
 *(bar charts)*
 
+Method | Performance
+------ | -----------
 GD copyResampled | 1x
 I::S resize_gd_fixed_point | 1.8x
 I::S resize_gd | 1.9x
 
 *2.6GHz Core i7 MacBook Pro (2012 model)*
 
+Method | Performance
+------ | -----------
 GD copyResampled | 1x
 I::S resize_gd | 2x
 I::S resize_gd_fixed_point | 7.4x
 
 *Marvell SheevaPlug 1.2GHz ARM9 (no FPU)*
 
+Method | Performance
+------ | -----------
 GD copyResampled | 1x
 I::S resize_gd | 1.1x
 I::S resize_gd_fixed_point | 66x
@@ -58,8 +64,7 @@ While the performance of low-end embedded CPUs may not be as poor as it was seve
 
 ## Links
 
-Image::Scale is available on [CPAN](https://metacpan.org/release/Image-Scale), and the git repository can be found on [GitHub](https://github.com/andygrundman/Image-Scale).
-
-[libgd](http://libgd.github.io)
-[GD Perl module](https://metacpan.org/release/GD)
-[libjpeg-turbo](http://www.libjpeg-turbo.org) - *x86/ARM SIMD-accelerated drop-in replacement for libjpeg, 2-4x faster*
+* Image::Scale is available on [CPAN](https://metacpan.org/release/Image-Scale), and the git repository can be found on [GitHub](https://github.com/andygrundman/Image-Scale).
+* [libgd](http://libgd.github.io)
+* [GD Perl module](https://metacpan.org/release/GD)
+* [libjpeg-turbo](http://www.libjpeg-turbo.org) - *x86/ARM SIMD-accelerated drop-in replacement for libjpeg, 2-4x faster*
