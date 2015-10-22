@@ -22,13 +22,13 @@ Fixed-point is implemented by splitting the 32 bits in a normal integer into an 
 
 ## Results
 
-I benchmarked the module on 3 different types of hardware: a high-end Core i7 MacBook Pro, a 1.2GHz ARM9 with no FPU, and the aforementioned 240MHz Sparc. Each of three tests loaded a 1425x1425 JPEG, resized it to 200x200, and compressed that to a new JPEG:
+I benchmarked the module on 3 different types of hardware: a high-end Core i7 MacBook Pro, a 1.2GHz ARM9 with no FPU, and the aforementioned 240MHz Sparc. Each of three tests loaded a 1425x1425 JPEG, resized it to 200x200, and compressed that to a new JPEG. libjpeg-turbo was used on the x86 and ARM systems.
 
 * The original GD module's `copyResampled` method.
 * Image::Scale's `resize_gd` method. This is a straight port of the floating-point algorithm.
 * Image::Scale's `resize_gd_fixed_point` method. 
 
-On a modern Intel CPU, you would expect the floating-point version to be as fast, if not better than, the fixed-point version. Indeed, this is true, with the floating point method slightly beating the fixed point one. Image::Scale is still around twice as fast thanks to the lack of libgd overhead and the use of JPEG prescaling. The following benchmarks involve resizing a 1425x1425 JPEG image to 200x200. libjpeg-turbo was used on the x86 and ARM systems.
+On a modern Intel CPU, you would expect the floating-point version to be as fast, if not better than, the fixed-point version. Indeed, this is true, with the floating point method slightly beating the fixed point one. Image::Scale is still around twice as fast thanks to the lack of libgd overhead and the use of JPEG prescaling.
 
 *(bar charts)*
 
