@@ -34,25 +34,25 @@ On a modern Intel CPU, you would expect the floating-point version to be as fast
 
 Method | Performance
 ------ | -----------
-GD copyResampled | 1x
-I::S resize_gd_fixed_point | 1.8x
-I::S resize_gd | 1.9x
+GD `copyResampled` | 1x
+I::S `resize_gd_fixed_point` | 1.8x
+I::S `resize_gd` | 1.9x
 
 *2.6GHz Core i7 MacBook Pro (2012 model)*
 
 Method | Performance
 ------ | -----------
-GD copyResampled | 1x
-I::S resize_gd | 2x
-I::S resize_gd_fixed_point | 7.4x
+GD `copyResampled` | 1x
+I::S `resize_gd` | 2x
+I::S `resize_gd_fixed_point` | 7.4x
 
 *Marvell SheevaPlug 1.2GHz ARM9 (no FPU)*
 
 Method | Performance
 ------ | -----------
-GD copyResampled | 1x
-I::S resize_gd | 1.1x
-I::S resize_gd_fixed_point | 66x
+GD `copyResampled` | 1x
+I::S `resize_gd` | 1.1x
+I::S `resize_gd_fixed_point` | 66x
 
 *Netgear ReadyNAS Duo (240MHz Sparc, no FPU)*
 
