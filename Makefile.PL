@@ -105,7 +105,12 @@ for my $incdir ( $jpeg_inc, @check ) {
             $JPEG_VERSION = _re_find( catfile($incdir, 'jpeglib.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
             if ( $JPEG_VERSION eq 'unknown' ) {
                 # Also check jconfig.h as it contains the version when using libjpeg-turbo
-                $JPEG_VERSION = _re_find( catfile($incdir, 'jconfig.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
+                if ( -d catdir($incdir, 'x86_64-linux-gnu') ) { # jconfig.h header is sometimes installed in a subdir
+                    $JPEG_VERSION = _re_find( catfile($incdir, 'x86_64-linux-gnu', 'jconfig.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
+                }
+                else {
+                    $JPEG_VERSION = _re_find( catfile($incdir, 'jconfig.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
+                }
             }
         }
         

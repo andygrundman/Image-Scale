@@ -1,5 +1,9 @@
 Revision history for Image::Scale
 
+0.12
+        - Correctly find libjpeg-turbo on Linux systems where some headers are installed
+          in /usr/include/x86_64-linux-gnu
+
 0.11    2015-10-07
         - Added $img->resized_height() and $img->resized_width() accessors that
           return the post-resize dimensions of the image. This can be useful if you 
