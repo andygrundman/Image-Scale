@@ -14,11 +14,13 @@ Tests:
   PNG <8-bit gray
   JPEG invalid marker, should continue (Michael's image)
 
-Research other image libraries:
+Research/benchmark other image libraries:
   http://gmic.eu/ (based on http://cimg.eu/)
   https://www.lrde.epita.fr/wiki/Olena
   http://www.vips.ecs.soton.ac.uk/index.php?title=VIPS
   http://core.tcl.tk/akupries/crimp/wiki?name=References
+  Image::Imlib2
+  Image::Resize::OpenCV
+  PDL
 
 Update benchmarks, include memory benchmarks.
-ActivePerl PPM packages.
