@@ -1,8 +1,10 @@
 Revision history for Image::Scale
 
 0.12
+        - Skip JPEG binary comparison tests by default, as they are broken with libjpeg-turbo.
         - Correctly find libjpeg-turbo on Linux systems where some headers are installed
           in /usr/include/x86_64-linux-gnu
+        - Removed hints/darwin.pl, don't try to be smarter than Perl about how to build things.
 
 0.11    2015-10-07
         - Added $img->resized_height() and $img->resized_width() accessors that
