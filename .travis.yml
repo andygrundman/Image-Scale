@@ -3,6 +3,6 @@ perl:
   - "5.22"
 install:
   - wget http://downloads.sourceforge.net/project/giflib/giflib-5.1.2.tar.bz2
-  - tar -jzvf giflib-5.1.2.tar.bz2
+  - tar -jxvf giflib-5.1.2.tar.bz2
   - cd giflib-5.1.2 && ./configure --prefix=$HOME/libs && make && make install
 script: "perl Makefile.PL --with-gif-includes=$HOME/libs/include --with-gif-libs=$HOME/libs/lib; make test TEST_VERBOSE=1"
