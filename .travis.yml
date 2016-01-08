@@ -2,7 +2,10 @@ language: perl
 perl:
   - "5.22"
 install:
+  - wget http://downloads.sourceforge.net/project/libpng/libpng16/1.6.20/libpng-1.6.20.tar.gz
+  - tar zxvf libpng-1.6.20.tar.gz
+  - cd libpng-1.6.20 && ./configure --prefix=$HOME/libs && make && make install && cd ..
   - wget http://downloads.sourceforge.net/project/giflib/giflib-5.1.2.tar.bz2
-  - tar -jxvf giflib-5.1.2.tar.bz2
+  - tar jxvf giflib-5.1.2.tar.bz2
   - cd giflib-5.1.2 && ./configure --prefix=$HOME/libs && make && make install && cd ..
-script: "perl Makefile.PL --with-gif-includes=$HOME/libs/include --with-gif-libs=$HOME/libs/lib; make test TEST_VERBOSE=1"
+script: "perl Makefile.PL --with-png-includes=$HOME/libs/include --with-png-libs=$HOME/libs/lib --with-gif-includes=$HOME/libs/include --with-gif-libs=$HOME/libs/lib; make test"
