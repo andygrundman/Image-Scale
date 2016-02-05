@@ -70,6 +70,7 @@ my @check = qw(/usr/include /usr/local/include /opt/local/include);
 unshift @check, split /:/, $ENV{INCLUDE};
 
 if ( $^O =~ /Win32/i ) {
+    push @check, $Config{incpath};
     push @check, '../libjpeg-turbo-1.1.1';
     push @check, '../lpng143';
     push @check, '../giflib-4.1.6/lib';
@@ -98,7 +99,8 @@ for my $incdir ( $jpeg_inc, @check ) {
             push @LIBS, '-ljpeg';
         }
         
-        if ( $^O =~ /Win32/i ) {
+        if ( $^O =~ /Win32/i && -e catfile($incdir, 'build', 'jconfig.h')) {
+            #Strawberry 5.14.0 has version in jpeglib.h only, jconfig.h is in strawberry\c\include\
             $JPEG_VERSION = _re_find( catfile($incdir, 'build', 'jconfig.h'), qr/JPEG_LIB_VERSION\s+(\d+)/ ) || 'unknown';
         }
         else {
