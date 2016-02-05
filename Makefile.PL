@@ -69,11 +69,14 @@ my @check = qw(/usr/include /usr/local/include /opt/local/include);
 # Check in environment-supplied locations before standard ones
 unshift @check, split /:/, $ENV{INCLUDE};
 
+my $libjpeg_local_windows = '../libjpeg-turbo-1.1.1';
+my $libpng_local_windows = '../lpng143';
+my $giflib_local_windows = '../giflib-4.1.6/lib';
 if ( $^O =~ /Win32/i ) {
     push @check, $Config{incpath};
-    push @check, '../libjpeg-turbo-1.1.1';
-    push @check, '../lpng143';
-    push @check, '../giflib-4.1.6/lib';
+    push @check, $libjpeg_local_windows;
+    push @check, $libpng_local_windows;
+    push @check, $giflib_local_windows;
 }
 
 # Look for libjpeg
@@ -227,17 +230,17 @@ print "\n";
 if ( $^O =~ /Win32/i ) {
     *MY::postamble = sub {};
 
-    if ($JPEG) {
+    if ($JPEG && $jpeg_inc eq $libjpeg_local_windows) {
         push @INC, '-I../libjpeg-turbo-1.1.1/build'; # for jconfig.h
         $MYEXTLIB .= '../libjpeg-turbo-1.1.1/build/jpeg-static.lib ';
     }
     
-    if ($PNG) {
+    if ($PNG && $png_inc eq $libpng_local_windows) {
         push @INC, '-I../zlib';
         $MYEXTLIB .= '../lpng143/libpng.lib ../zlib/zlib.lib ';
     }
     
-    if ($GIF) {
+    if ($GIF && $gif_inc ne $giflib_local_windows) {
         $MYEXTLIB .= '../giflib-4.1.6/windows/Release/giflib.lib ';
     }
 }
