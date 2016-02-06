@@ -240,7 +240,7 @@ if ( $^O =~ /Win32/i ) {
         $MYEXTLIB .= '../lpng143/libpng.lib ../zlib/zlib.lib ';
     }
     
-    if ($GIF && $gif_inc ne $giflib_local_windows) {
+    if ($GIF && $gif_inc eq $giflib_local_windows) {
         $MYEXTLIB .= '../giflib-4.1.6/windows/Release/giflib.lib ';
     }
 }
