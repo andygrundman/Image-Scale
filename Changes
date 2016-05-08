@@ -1,6 +1,6 @@
 Revision history for Image::Scale
 
-0.12
+0.12    2016-05-08
         - Skip JPEG binary comparison tests by default, as they are broken with libjpeg-turbo.
         - Correctly find libjpeg-turbo on Linux systems where some headers are installed
           in /usr/include/x86_64-linux-gnu

@@ -1,5 +1,4 @@
 Changes
-hints/darwin.pl
 include/buffer.h
 include/common.h
 include/fixed.h
