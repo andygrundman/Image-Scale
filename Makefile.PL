@@ -259,6 +259,7 @@ WriteMakefile(
             },
         },
     },
+    MIN_PERL_VERSION => 5.008,
 );
 
 sub _re_find {
