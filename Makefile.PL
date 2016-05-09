@@ -260,6 +260,7 @@ WriteMakefile(
         },
     },
     MIN_PERL_VERSION => 5.008,
+    LICENSE => 'gpl_2',
 );
 
 sub _re_find {
