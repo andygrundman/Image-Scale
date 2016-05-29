@@ -2,7 +2,7 @@ NAME
     Image::Scale - Fast, high-quality fixed-point image resizing
 
 SYNOPSIS
-        use Image::Scale
+        use Image::Scale;
     
         # Resize to 150 width and save to a file
         my $img = Image::Scale->new('image.jpg') || die "Invalid JPEG file";
