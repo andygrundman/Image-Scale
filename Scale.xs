@@ -1,4 +1,4 @@
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
 #define NO_XSLOCKS // Needed to avoid PerlProc_setjmp/PerlProc_longjmp unresolved symbols
 #endif
 
