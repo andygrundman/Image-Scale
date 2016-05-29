@@ -1,11 +1,17 @@
 language: perl
+
 perl:
+  - "5.8"
+  - "5.10"
+  - "5.12"
+  - "5.14"
+  - "5.16"
+  - "5.18"
+  - "5.20"
   - "5.22"
-install:
-  - wget http://downloads.sourceforge.net/project/libpng/libpng16/1.6.20/libpng-1.6.20.tar.gz
-  - tar zxvf libpng-1.6.20.tar.gz
-  - cd libpng-1.6.20 && ./configure --prefix=$HOME/libs && make && make install && cd ..
-  - wget http://downloads.sourceforge.net/project/giflib/giflib-5.1.2.tar.bz2
-  - tar jxvf giflib-5.1.2.tar.bz2
-  - cd giflib-5.1.2 && ./configure --prefix=$HOME/libs && make && make install && cd ..
-script: "perl Makefile.PL --with-png-includes=$HOME/libs/include --with-png-libs=$HOME/libs/lib --with-gif-includes=$HOME/libs/include --with-gif-libs=$HOME/libs/lib; make test"
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libjpeg-dev libpng12-dev
+
+script: "perl Makefile.PL; TEST_POD=1 make test"
