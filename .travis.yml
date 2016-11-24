@@ -9,9 +9,10 @@ perl:
   - "5.18"
   - "5.20"
   - "5.22"
+  - "5.24"
 
 before_install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libjpeg-dev libpng12-dev
+  - sudo apt-get install -y libjpeg-dev libpng12-dev libgif-dev
 
 script: "perl Makefile.PL; TEST_POD=1 make test"

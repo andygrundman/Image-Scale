@@ -225,7 +225,7 @@ print "\n";
 print "Image::Scale will be built with:\n\n";
 print "  JPEG support:     " . ( $JPEG ? "yes ($jpeg_inc, libjpeg version $JPEG_VERSION)" : "no, install libjpeg (v8 recommended)" ) . "\n";
 print "  PNG support:      " . ( $PNG ? "yes ($png_inc, libpng version $PNG_VERSION)" : "no, install libpng (v1.4.x recommended)" ) . "\n";
-print "  GIF support:      " . ( $GIF ? "yes ($gif_inc, giflib version $GIF_VERSION)" : "no, install giflib 4.2 or higher" ) . "\n";
+print "  GIF support:      " . ( $GIF ? "yes ($gif_inc, giflib version $GIF_VERSION)" : "no, install giflib v4.1 or higher" ) . "\n";
 print "\n";
 
 if ( $^O =~ /Win32/i ) {
