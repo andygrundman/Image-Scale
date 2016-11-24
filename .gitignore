@@ -7,6 +7,7 @@
 /MYMETA.*
 nytprof.out
 /pm_to_blib
+t/tmp/
 *.o
 *.bs
 Scale.c

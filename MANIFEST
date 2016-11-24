@@ -181,6 +181,7 @@ t/ref/png/rgba16_resize_gd_fixed_point_w100.png
 t/ref/png/rgba_interlaced_resize_gd_fixed_point_w100.png
 t/ref/png/rgba_multiple_resize_gd_fixed_point.png
 t/ref/png/rgba_resize_gd_fixed_point_w100.png
+t/stringify.t
 TODO
 tools/bench.pl
 tools/scan.pl

@@ -27,15 +27,15 @@ PPCODE:
 {
   SV *pv = NEWSV(0, sizeof(image));
   image *im = (image *)SvPVX(pv);
-  
+
   SvPOK_only(pv);
-  
+
   if ( !image_init(self, im) ) {
     // Return undef on any errors during header reading
     SvREFCNT_dec(pv);
     XSRETURN_UNDEF;
   }
-  
+
   XPUSHs( sv_2mortal( sv_bless(
     newRV_noinc(pv),
     gv_stashpv("Image::Scale::XS", 1)
@@ -47,7 +47,7 @@ width(HV *self)
 CODE:
 {
   image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
-  
+
   RETVAL = im->width;
 }
 OUTPUT:
@@ -58,7 +58,7 @@ height(HV *self)
 CODE:
 {
   image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
-  
+
   RETVAL = im->height;
 }
 OUTPUT:
@@ -91,7 +91,7 @@ resize(HV *self, HV *opts)
 CODE:
 {
   image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
-  
+
   // Reset options if resize is being called multiple times
   if (im->target_width) {
     im->target_width  = 0;
@@ -103,34 +103,34 @@ CODE:
     im->resize_type   = IMAGE_SCALE_TYPE_GD;
     im->filter        = 0;
   }
-  
+
   if (my_hv_exists(opts, "width"))
     im->target_width = SvIV(*(my_hv_fetch(opts, "width")));
-  
+
   if (my_hv_exists(opts, "height"))
     im->target_height = SvIV(*(my_hv_fetch(opts, "height")));
-  
+
   if (!im->target_width && !im->target_height) {
     croak("Image::Scale->resize requires at least one of height or width");
   }
-  
+
   if (my_hv_exists(opts, "keep_aspect"))
     im->keep_aspect = SvIV(*(my_hv_fetch(opts, "keep_aspect")));
-  
+
   if (my_hv_exists(opts, "ignore_exif")) {
     if (SvIV(*(my_hv_fetch(opts, "ignore_exif"))) != 0)
       im->orientation = ORIENTATION_NORMAL;
   }
-  
+
   if (my_hv_exists(opts, "bgcolor"))
     im->bgcolor = SvIV(*(my_hv_fetch(opts, "bgcolor"))) << 8 | 0xFF;
-  
+
   if (my_hv_exists(opts, "memory_limit"))
     im->memory_limit = SvIV(*(my_hv_fetch(opts, "memory_limit")));
-  
+
   if (my_hv_exists(opts, "type"))
     im->resize_type = SvIV(*(my_hv_fetch(opts, "type")));
-  
+
   if (my_hv_exists(opts, "filter")) {
     char *filterstr = SvPVX(*(my_hv_fetch(opts, "filter")));
     if (strEQ("Point", filterstr))
@@ -164,7 +164,7 @@ CODE:
     else if (strEQ("Sinc", filterstr))
       im->filter = SincFilter;
   }
-  
+
   // If the image will be rotated 90 degrees, swap the target values
   if (im->orientation >= 5) {
     if (!im->target_height) {
@@ -177,8 +177,8 @@ CODE:
       im->target_width = im->target_height;
       im->target_height = 0;
     }
-  }      
-  
+  }
+
   if (!im->target_height) {
     // Only width was specified
     im->target_height = (int)((float)im->height / im->width * im->target_width);
@@ -191,9 +191,9 @@ CODE:
     if (im->target_width < 1)
       im->target_width = 1;
   }
-  
+
   DEBUG_TRACE("Resizing from %d x %d -> %d x %d\n", im->width, im->height, im->target_width, im->target_height);
-  
+
   RETVAL = image_resize(im);
 }
 OUTPUT:
@@ -205,17 +205,14 @@ save_jpeg(HV *self, SV *path, ...)
 CODE:
 {
   image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
+
   int quality = DEFAULT_JPEG_QUALITY;
-  
-  if ( !SvPOK(path) ) {
-    croak("Image::Scale->save_jpeg requires a path");
-  }
-  
+
   if (items == 3 && SvOK(ST(2))) {
     quality = SvIV(ST(2));
   }
-  
-  image_jpeg_save(im, SvPVX(path), quality);
+
+  image_jpeg_save(im, SvPV_nolen(path), quality);
 }
 
 SV *
@@ -224,13 +221,13 @@ CODE:
 {
   image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
   int quality = DEFAULT_JPEG_QUALITY;
-  
+
   if (items == 2 && SvOK(ST(1))) {
     quality = SvIV(ST(1));
   }
-  
+
   RETVAL = newSVpvn("", 0);
-  
+
   image_jpeg_to_sv(im, quality, RETVAL);
 }
 OUTPUT:
@@ -244,12 +241,8 @@ save_png(HV *self, SV *path)
 CODE:
 {
   image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
-  
-  if ( !SvPOK(path) ) {
-    croak("Image::Scale->save_jpeg requires a path");
-  }
-  
-  image_png_save(im, SvPVX(path));
+
+  image_png_save(im, SvPV_nolen(path));
 }
 
 SV *
@@ -259,7 +252,7 @@ CODE:
   image *im = (image *)SvPVX(SvRV(*(my_hv_fetch(self, "_image"))));
 
   RETVAL = newSVpvn("", 0);
-  
+
   image_png_to_sv(im, RETVAL);
 }
 OUTPUT:

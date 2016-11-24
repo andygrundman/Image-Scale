@@ -7,7 +7,7 @@ use constant IMAGE_SCALE_TYPE_GD_FIXED => 1;
 use constant IMAGE_SCALE_TYPE_GM       => 2;
 use constant IMAGE_SCALE_TYPE_GM_FIXED => 3;
 
-our $VERSION = '0.12';
+our $VERSION = '0.13';
 
 require XSLoader;
 XSLoader::load('Image::Scale', $VERSION);
@@ -15,10 +15,10 @@ XSLoader::load('Image::Scale', $VERSION);
 sub new {
     my $class = shift;
     my $self;
-    
+
     my $file = shift || die "Image::Scale->new requires an image path\n";
     my $opts = shift || {};
-    
+
     if ( ref $file eq 'SCALAR' ) {
         $self = bless {
             data => $file,
@@ -29,23 +29,23 @@ sub new {
         if ( !-e $file ) {
             die "Image::Scale couldn't find $file\n";
         }
-        
+
         open my $fh, '<', $file || die "Image::Scale couldn't open $file: $!\n";
         binmode $fh;
-    
+
         $self = bless {
             file => $file,
             _fh  => $fh,
             %{$opts},
         };
     }
-    
+
     # XS init, determine the file type and image size
     $self->{_image} = $self->__init();
-    
+
     # __init will return undef on any errors
     return if !$self->{_image};
-    
+
     return $self;
 }
 
@@ -67,11 +67,11 @@ sub resize_gm_fixed_point {
 
 sub DESTROY {
     my $self = shift;
-    
+
     # XS cleanup
     $self->__cleanup( $self->{_image} ) if $self->{_image};
-    
-    close $self->{_fh} if $self->{_fh}; 
+
+    close $self->{_fh} if $self->{_fh};
 }
 
 1;
@@ -84,12 +84,12 @@ Image::Scale - Fast, high-quality fixed-point image resizing
 =head1 SYNOPSIS
 
     use Image::Scale;
-    
+
     # Resize to 150 width and save to a file
     my $img = Image::Scale->new('image.jpg') || die "Invalid JPEG file";
     $img->resize_gd( { width => 150 } );
     $img->save_jpeg('resized.jpg');
-    
+
     # Easily resize artwork embedded within an audio file
     # You can use L<Audio::Scan> to obtain offset/length information
     my $img = Image::Scale->new( 'track.mp3', { offset => 2200, length => 34123 } );
