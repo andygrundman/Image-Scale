@@ -1,5 +1,8 @@
 Revision history for Image::Scale
 
+0.13
+        - Added back support for giflib 4.1.x.
+
 0.12    2016-05-08
         - Skip JPEG binary comparison tests by default, as they are broken with libjpeg-turbo.
         - Correctly find libjpeg-turbo on Linux systems where some headers are installed
@@ -8,8 +11,8 @@ Revision history for Image::Scale
 
 0.11    2015-10-07
         - Added $img->resized_height() and $img->resized_width() accessors that
-          return the post-resize dimensions of the image. This can be useful if you 
-          only specified one dimension and need to know the other dimension that 
+          return the post-resize dimensions of the image. This can be useful if you
+          only specified one dimension and need to know the other dimension that
           was calculated by the module. (RT #80269)
         - Changed ARM fixed_mul assembly code to not round the result, in order to
           match the output from x86 and C versions and pass the tests. (RT #93417)
