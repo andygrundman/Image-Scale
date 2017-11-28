@@ -68,6 +68,10 @@ buf_src_fill_input_buffer(j_decompress_ptr cinfo)
     // read from SV into buffer
     int sv_readlen = MIN(sv_len(im->sv_data) - im->sv_offset, BUFFER_SIZE);
 
+    // corrupt JPEGs read from SV buffers need to check for EOF
+    if (sv_readlen <= 0)
+      goto eof;
+
     DEBUG_TRACE("  Reading %d bytes of SV data @ %d\n", sv_readlen, im->sv_offset);
     buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, sv_readlen);
     im->sv_offset += sv_readlen;
@@ -99,13 +103,15 @@ buf_src_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
   image *im = src->im;
 
   if (num_bytes > 0) {
-    DEBUG_TRACE("JPEG skip requested: %ld bytes\n", num_bytes);
+    DEBUG_TRACE("JPEG skip requested: num_bytes=%ld, src->bytes_in_buffer=%ld\n", num_bytes, cinfo->src->bytes_in_buffer);
 
     while (num_bytes > cinfo->src->bytes_in_buffer) {
       num_bytes -= (long)cinfo->src->bytes_in_buffer;
 
       // fill_input_buffer will discard the data in the current buffer
       (void) (*cinfo->src->fill_input_buffer)(cinfo);
+
+      DEBUG_TRACE("After fill_input_buffer, num_bytes=%ld bytes, src->bytes_in_buffer=%ld\n", num_bytes, cinfo->src->bytes_in_buffer);
     }
 
     // Discard the remaining bytes, taking into account the amount libjpeg has already read

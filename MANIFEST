@@ -50,6 +50,7 @@ t/images/gif/v2.4-apic-gif-318-5169.mp3
 t/images/gif/white.gif
 t/images/jpg/cmyk.jpg
 t/images/jpg/corrupt.jpg
+t/images/jpg/corrupt-sv-infinite-loop.jpg
 t/images/jpg/exif_180.jpg
 t/images/jpg/exif_270_ccw.jpg
 t/images/jpg/exif_90_ccw.jpg

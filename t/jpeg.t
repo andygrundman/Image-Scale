@@ -11,7 +11,7 @@ use Image::Scale;
 my $jpeg_version = Image::Scale->jpeg_version();
 
 if ($jpeg_version) {
-    plan tests => 116;
+    plan tests => 117;
 }
 else {
     plan skip_all => 'Image::Scale not built with libjpeg support';
@@ -341,6 +341,19 @@ SKIP:
     $im->save_jpeg($outfile);
 
     is( _compare( _load($outfile), "rgb_resize_gd_fixed_point_w100.jpg" ), 1, "JPEG resize_gd_fixed_point multiple from scalar ok" );
+}
+
+# resize corrupted JPEG in scalar. This caused an infinite loop bug in < 0.14
+# Note: corrupt.jpeg and truncated.jpg didn't trigger this bug
+{
+    my $dataref = _load( _f("corrupt-sv-infinite-loop.jpg") );
+
+    my $im = Image::Scale->new($dataref);
+    $im->resize_gd_fixed_point( { width => 100 } );
+    my $out = $im->as_jpeg;
+
+    # We want to always test this, so just check that we got a JPEG back
+    is( unpack( 'H*', substr( $out, 0, 4 ) ), 'ffd8ffe0', 'corrupt-sv-infinite-loop.jpg resize in-memory ok');
 }
 
 # offset image in MP3 ID3v2 tag

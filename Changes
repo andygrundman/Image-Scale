@@ -1,5 +1,9 @@
 Revision history for Image::Scale
 
+0.14
+        - Trying to resize certain kinds of corrupt JPEGs from an in-memory variable could get
+          stuck in an infinite loop.
+
 0.13    2016-11-24
         - save_jpeg() and save_png() will now properly stringify when passed something such as a
           Path::Tiny object.
