@@ -407,12 +407,12 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
   int x;
   int dstX = 0;
   int dstW = destination->columns;
-  
+
   if (im->width_padding) {
     dstX = im->width_padding;
     dstW = im->width_inner;
   }
-  
+
   scale = BLUR * MAX(1.0 / x_factor, 1.0);
   support = scale * filter_info->support;
   if (support <= 0.5) {
@@ -421,72 +421,72 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
     scale = 1.0;
   }
   scale = 1.0 / scale;
-  
+
   for (x = dstX; (x < dstX + dstW); x++) {
     float center, density;
     int n, start, stop, y;
-    
+
     center  = (float)(x - dstX + 0.5) / x_factor;
     start   = (int)MAX(center - support + 0.5, 0);
     stop    = (int)MIN(center + support + 0.5, source->columns);
     density = 0.0;
-    
+
     //DEBUG_TRACE("x %d: center %.2f, start %d, stop %d\n", x, center, start, stop);
-    
+
     for (n = 0; n < (stop - start); n++) {
       contribution[n].pixel = start + n;
       contribution[n].weight = filter_info->function(scale * (start + n - center + 0.5), filter_info->support);
       density += contribution[n].weight;
       //DEBUG_TRACE("  contribution[%d].pixel %d, weight %.2f, density %.2f\n", n, contribution[n].pixel, contribution[n].weight, density);
     }
-    
+
     if ((density != 0.0) && (density != 1.0)) {
       // Normalize
       int i;
-      
+
       density = 1.0 / density;
       for (i = 0; i < n; i++) {
         contribution[i].weight *= density;
         //DEBUG_TRACE("  normalize contribution[%d].weight to %.2f\n", i, contribution[i].weight);
       }
     }
-    
+
     for (y = 0; y < destination->rows; y++) {
       float weight;
       float red = 0.0, green = 0.0, blue = 0.0, alpha = 0.0;
       pix p;
       int j;
       register int i;
-      
+
       //DEBUG_TRACE("y %d:\n", y);
-      
+
       if (im->has_alpha) {
         float normalize;
-      
+
         normalize = 0.0;
-        for (i = 0; i < n; i++) {          
+        for (i = 0; i < n; i++) {
           j = (int)((y * source->columns) + contribution[i].pixel);
           weight = contribution[i].weight;
           p = source->buf[j];
-          
+
           // XXX The original GM code weighted based on transparency for some reason,
           // but this produces bad results, so we use only the weight
           //transparency_coeff = weight * ((float)COL_ALPHA(p) / 255);
-          
+
           /*
           DEBUG_TRACE("    merging with pix (%d, %d) @ %d (%d %d %d %d) weight %.2f\n",
             x, contribution[i].pixel, j,
             COL_RED(p), COL_GREEN(p), COL_BLUE(p), COL_ALPHA(p),
             weight);
           */
-          
+
           red   += weight * COL_RED(p);
           green += weight * COL_GREEN(p);
           blue  += weight * COL_BLUE(p);
           alpha += weight * COL_ALPHA(p);
           normalize += weight;
         }
-      
+
         normalize = 1.0 / (ABS(normalize) <= EPSILON ? 1.0 : normalize);
         red   *= normalize;
         green *= normalize;
@@ -497,22 +497,22 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
           j = (int)((y * source->columns) + contribution[i].pixel);
           weight = contribution[i].weight;
           p = source->buf[j];
-          
+
           /*
           DEBUG_TRACE("    merging with pix (%d, %d) @ %d (%d %d %d) weight %.2f\n",
             contribution[i].pixel, y, j,
             COL_RED(p), COL_GREEN(p), COL_BLUE(p),
             weight);
           */
-          
+
           red   += weight * COL_RED(p);
           green += weight * COL_GREEN(p);
           blue  += weight * COL_BLUE(p);
         }
-        
+
         alpha = 255.0;
       }
-      
+
       /*
       DEBUG_TRACE("  -> (%d, %d) @ %d (%d %d %d %d)\n",
         x, y, (y * destination->columns) + x,
@@ -521,7 +521,7 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
         ROUND_FLOAT_TO_INT(blue),
         ROUND_FLOAT_TO_INT(alpha));
       */
-      
+
       if (rotate && im->orientation != ORIENTATION_NORMAL) {
         int ox, oy; // new destination pixel coordinates after rotating
 
@@ -545,7 +545,7 @@ image_downsize_gm_horizontal_filter(image *im, ImageInfo *source, ImageInfo *des
           );
         }
       }
-      else { 
+      else {
         destination->buf[(y * destination->columns) + x] = COL_FULL(
           ROUND_FLOAT_TO_INT(red),
           ROUND_FLOAT_TO_INT(green),
@@ -565,14 +565,14 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
   int y;
   int dstY = 0;
   int dstH = destination->rows;
-  
+
   if (im->height_padding) {
     dstY = im->height_padding;
     dstH = im->height_inner;
   }
-  
+
   //DEBUG_TRACE("y_factor %.2f\n", y_factor);
-  
+
   // Apply filter to resize vertically from source to destination
   scale = BLUR * MAX(1.0 / y_factor, 1.0);
   support = scale * filter_info->support;
@@ -582,58 +582,58 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
     scale = 1.0;
   }
   scale = 1.0 / scale;
-  
+
   for (y = dstY; (y < dstY + dstH); y++) {
     float center, density;
     int n, start, stop, x;
-    
+
     center  = (float)(y - dstY + 0.5) / y_factor;
     start   = (int)MAX(center - support + 0.5, 0);
     stop    = (int)MIN(center + support + 0.5, source->rows);
     density = 0.0;
-    
+
     //DEBUG_TRACE("y %d: center %.2f, start %d, stop %d\n", y, center, start, stop);
-    
+
     for (n = 0; n < (stop - start); n++) {
       contribution[n].pixel = start + n;
       contribution[n].weight = filter_info->function(scale * (start + n - center + 0.5), filter_info->support);
       density += contribution[n].weight;
       //DEBUG_TRACE("  contribution[%d].pixel %d, weight %.2f, density %.2f\n", n, contribution[n].pixel, contribution[n].weight, density);
     }
-    
+
     if ((density != 0.0) && (density != 1.0)) {
       // Normalize
       int i;
-      
+
       density = 1.0 / density;
       for (i = 0; i < n; i++) {
         contribution[i].weight *= density;
         //DEBUG_TRACE("  normalize contribution[%d].weight to %.2f\n", i, contribution[i].weight);
       }
     }
-    
+
     for (x = 0; x < destination->columns; x++) {
       float weight;
       float red = 0.0, green = 0.0, blue = 0.0, alpha = 0.0;
       pix p;
       int j;
       register int i;
-      
+
       //DEBUG_TRACE("x %d:\n", x);
-      
+
       if (im->has_alpha) {
         float normalize;
-      
+
         normalize = 0.0;
-        for (i = 0; i < n; i++) {          
+        for (i = 0; i < n; i++) {
           j = (int)((contribution[i].pixel * source->columns) + x);
           weight = contribution[i].weight;
           p = source->buf[j];
-        
+
           // XXX The original GM code weighted based on transparency for some reason,
           // but this produces bad results, so we use only the weight
           //transparency_coeff = weight * ((float)COL_ALPHA(p) / 255);
-          
+
           /*
           DEBUG_TRACE("    merging with pix (%d, %d) @ %d (%d %d %d %d) weight %.2f\n",
             x, contribution[i].pixel, j,
@@ -641,14 +641,14 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
             weight
           );
           */
-          
+
           red   += weight * COL_RED(p);
           green += weight * COL_GREEN(p);
           blue  += weight * COL_BLUE(p);
           alpha += weight * COL_ALPHA(p);
           normalize += weight;
         }
-      
+
         normalize = 1.0 / (ABS(normalize) <= EPSILON ? 1.0 : normalize);
         red   *= normalize;
         green *= normalize;
@@ -659,22 +659,22 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
           j = (int)((contribution[i].pixel * source->columns) + x);
           weight = contribution[i].weight;
           p = source->buf[j];
-        
+
           /*
           DEBUG_TRACE("    merging with pix (%d, %d) @ %d (%d %d %d) weight %.2f\n",
             x, contribution[i].pixel, j,
             COL_RED(p), COL_GREEN(p), COL_BLUE(p),
             weight);
           */
-          
+
           red   += weight * COL_RED(p);
           green += weight * COL_GREEN(p);
           blue  += weight * COL_BLUE(p);
         }
-        
+
         alpha = 255.0;
       }
-      
+
       /*
       DEBUG_TRACE("  -> (%d, %d) @ %d (%d %d %d %d)\n",
         x, y, (y * destination->columns) + x,
@@ -683,7 +683,7 @@ image_downsize_gm_vertical_filter(image *im, ImageInfo *source, ImageInfo *desti
         ROUND_FLOAT_TO_INT(blue),
         ROUND_FLOAT_TO_INT(alpha));
       */
-      
+
       if (rotate && im->orientation != ORIENTATION_NORMAL) {
         int ox, oy; // new destination pixel coordinates after rotating
 
@@ -729,7 +729,7 @@ image_downsize_gm(image *im)
   int filter;
   ContributionInfo *contribution;
   ImageInfo source, destination;
-  
+
   static const FilterInfo
     filters[SincFilter+1] =
     {
@@ -750,7 +750,7 @@ image_downsize_gm(image *im)
       { BlackmanBessel, 3.2383 },
       { BlackmanSinc, 4.0 }
     };
-  
+
   columns = im->target_width;
   rows = im->target_height;
   filter = im->filter;
@@ -762,67 +762,67 @@ image_downsize_gm(image *im)
     else
       filter = LanczosFilter;
   }
-  
+
   DEBUG_TRACE("Resizing with filter %d\n", filter);
-  
+
   // Determine which dimension to resize first
   order = (((float)columns * (im->height + rows)) >
          ((float)rows * (im->width + columns)));
-  
+
   if (im->width_padding)
     x_factor = (float)im->width_inner / im->width;
   else
     x_factor = (float)im->target_width / im->width;
-  
+
   if (im->height_padding)
     y_factor = (float)im->height_inner / im->height;
   else
     y_factor = (float)im->target_height / im->height;
-  
+
   x_support = BLUR * MAX(1.0 / x_factor, 1.0) * filters[filter].support;
   y_support = BLUR * MAX(1.0 / y_factor, 1.0) * filters[filter].support;
   support = MAX(x_support, y_support);
   if (support < filters[filter].support)
     support = filters[filter].support;
-  
+
   DEBUG_TRACE("ContributionInfo allocated for %ld items\n", (size_t)(2.0 * MAX(support, 0.5) + 3));
   New(0, contribution, (size_t)(2.0 * MAX(support, 0.5) + 3), ContributionInfo);
-  
+
   DEBUG_TRACE("order %d, x_factor %f, y_factor %f, support %f\n", order, x_factor, y_factor, support);
-  
+
   source.rows    = im->height;
   source.columns = im->width;
   source.buf     = im->pixbuf;
-  
+
   if (order) {
     DEBUG_TRACE("Allocating temporary buffer size %ld\n", im->target_width * im->height * sizeof(pix));
     New(0, im->tmpbuf, im->target_width * im->height, pix);
-    
+
     // Fill new space with the bgcolor or zeros
     image_bgcolor_fill(im->tmpbuf, im->target_width * im->height, im->bgcolor);
-    
+
     // Resize horizontally from source -> tmp
     destination.rows    = im->height;
     destination.columns = im->target_width;
     destination.buf     = im->tmpbuf;
     image_downsize_gm_horizontal_filter(im, &source, &destination, x_factor, &filters[filter], contribution, 0);
-    
+
     // Resize vertically from tmp -> out
     source.rows    = destination.rows;
     source.columns = destination.columns;
     source.buf     = destination.buf;
-    
+
     destination.rows = im->target_height;
     destination.buf  = im->outbuf;
-    image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution, 1);    
+    image_downsize_gm_vertical_filter(im, &source, &destination, y_factor, &filters[filter], contribution, 1);
   }
-  else {    
+  else {
     DEBUG_TRACE("Allocating temporary buffer size %ld\n", im->width * im->target_height * sizeof(pix));
     New(0, im->tmpbuf, im->width * im->target_height, pix);
-    
+
     // Fill new space with the bgcolor or zeros
     image_bgcolor_fill(im->tmpbuf, im->width * im->target_height, im->bgcolor);
-    
+
     // Resize vertically from source -> tmp
     destination.rows    = im->target_height;
     destination.columns = im->width;
@@ -833,12 +833,12 @@ image_downsize_gm(image *im)
     source.rows    = destination.rows;
     source.columns = destination.columns;
     source.buf     = destination.buf;
-    
+
     destination.columns = im->target_width;
     destination.buf     = im->outbuf;
     image_downsize_gm_horizontal_filter(im, &source, &destination, x_factor, &filters[filter], contribution, 1);
   }
-  
+
   Safefree(im->tmpbuf);
   Safefree(contribution);
 }

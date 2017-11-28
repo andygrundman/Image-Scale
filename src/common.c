@@ -21,7 +21,7 @@ int
 _check_buf(PerlIO *infile, Buffer *buf, int min_wanted, int max_wanted)
 {
   int ret = 1;
-  
+
   // Do we have enough data?
   if ( buffer_len(buf) < min_wanted ) {
     // Read more data
@@ -32,16 +32,16 @@ _check_buf(PerlIO *infile, Buffer *buf, int min_wanted, int max_wanted)
 #ifdef _MSC_VER
     uint32_t pos_check = PerlIO_tell(infile);
 #endif
-    
+
     if (min_wanted > max_wanted) {
       max_wanted = min_wanted;
     }
-    
+
     // Adjust actual amount to read by the amount we already have in the buffer
     actual_wanted = max_wanted - buffer_len(buf);
 
     New(0, tmp, actual_wanted, unsigned char);
-    
+
     DEBUG_TRACE("Buffering from file @ %d (min_wanted %d, max_wanted %d, adjusted to %d)\n",
       (int)PerlIO_tell(infile), min_wanted, max_wanted, actual_wanted
     );
@@ -91,21 +91,21 @@ _file_size(PerlIO *infile)
 #ifdef _MSC_VER
   // Win32 doesn't work right with fstat
   off_t file_size;
-  
+
   PerlIO_seek(infile, 0, SEEK_END);
   file_size = PerlIO_tell(infile);
   PerlIO_seek(infile, 0, SEEK_SET);
-  
+
   return file_size;
 #else
   struct stat buf;
-  
+
   if ( !fstat( PerlIO_fileno(infile), &buf ) ) {
     return buf.st_size;
   }
-  
+
   warn("Unable to stat: %s\n", strerror(errno));
-  
+
   return 0;
 #endif
 }
@@ -120,11 +120,11 @@ hexdump(unsigned char *data, uint32_t size)
   char bytestr[4] = {0};
   char hexstr[ 16*3 + 5] = {0};
   char charstr[16*1 + 5] = {0};
-  
+
   if (!size) {
     return;
   }
-  
+
   for (n = 0; n < size; n++) {
     c = data[n];
 
@@ -139,7 +139,7 @@ hexdump(unsigned char *data, uint32_t size)
     snprintf(bytestr, sizeof(bytestr), "%c", c);
     strncat(charstr, bytestr, sizeof(charstr)-strlen(charstr)-1);
 
-    if (i % 16 == 0) { 
+    if (i % 16 == 0) {
       /* line completed */
       PerlIO_printf(PerlIO_stderr(), "%-50.50s  %s\n", hexstr, charstr);
       hexstr[0] = 0;

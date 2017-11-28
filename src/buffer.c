@@ -153,7 +153,7 @@ restart:
     newlen = (buffer->alloc + len) * 2;
   else
     newlen = buffer->alloc + len + 4096;
-  
+
   if (newlen > BUFFER_MAX_LEN)
     croak("buffer_append_space: alloc %u too large (max %u)",
         newlen, BUFFER_MAX_LEN);
@@ -278,11 +278,11 @@ buffer_dump(Buffer *buffer, uint32_t size)
   char bytestr[4] = {0};
   char hexstr[ 16*3 + 5] = {0};
   char charstr[16*1 + 5] = {0};
-  
+
   if (!size) {
     size = buffer->end - buffer->offset;
   }
-  
+
   for (n = buffer->offset; n < buffer->offset + size; n++) {
     c = data[n];
 
@@ -297,7 +297,7 @@ buffer_dump(Buffer *buffer, uint32_t size)
     snprintf(bytestr, sizeof(bytestr), "%c", c);
     strncat(charstr, bytestr, sizeof(charstr)-strlen(charstr)-1);
 
-    if (i % 16 == 0) { 
+    if (i % 16 == 0) {
       /* line completed */
       PerlIO_printf(PerlIO_stderr(), "%-50.50s  %s\n", hexstr, charstr);
       hexstr[0] = 0;
@@ -647,33 +647,33 @@ buffer_get_utf8(Buffer *buffer, Buffer *utf8, uint32_t len_hint)
 {
   int i = 0;
   unsigned char *bptr = buffer_ptr(buffer);
-  
+
   if (!len_hint) return 0;
-  
+
   for (i = 0; i < len_hint; i++) {
     uint8_t c = bptr[i];
-    
+
     buffer_put_char(utf8, c);
-    
+
     if (c == 0) {
       i++;
       break;
     }
   }
-  
+
   // Consume string + null
   buffer_consume(buffer, i);
-  
+
   // Add null if one wasn't provided
   if ( (utf8->buf + utf8->end - 1)[0] != 0 ) {
     buffer_put_char(utf8, 0);
   }
-  
+
 #ifdef AUDIO_SCAN_DEBUG
   //DEBUG_TRACE("utf8 buffer:\n");
   //buffer_dump(utf8, 0);
 #endif
-  
+
   return i;
 }
 
@@ -687,16 +687,16 @@ buffer_get_latin1_as_utf8(Buffer *buffer, Buffer *utf8, uint32_t len_hint)
   int i = 0;
   unsigned char *bptr = buffer_ptr(buffer);
   uint8_t is_utf8;
-  
+
   if (!len_hint) return 0;
-  
+
   // We may get a valid UTF-8 string in here from ID3v1 or
   // elsewhere, if so we don't want to translate from ISO-8859-1
   is_utf8 = is_utf8_string(bptr, len_hint);
-  
+
   for (i = 0; i < len_hint; i++) {
     uint8_t c = bptr[i];
-    
+
     if (is_utf8) {
       buffer_put_char(utf8, c);
     }
@@ -714,26 +714,26 @@ buffer_get_latin1_as_utf8(Buffer *buffer, Buffer *utf8, uint32_t len_hint)
         buffer_put_char(utf8, c - 64);
       }
     }
-    
+
     if (c == 0) {
       i++;
       break;
     }
   }
-  
+
   // Consume string + null
   buffer_consume(buffer, i);
-  
+
   // Add null if one wasn't provided
   if ( (utf8->buf + utf8->end - 1)[0] != 0 ) {
     buffer_put_char(utf8, 0);
   }
-  
+
 #ifdef AUDIO_SCAN_DEBUG
   //DEBUG_TRACE("utf8 buffer:\n");
   //buffer_dump(utf8, 0);
 #endif
-  
+
   return i;
 }
 
@@ -745,9 +745,9 @@ buffer_get_utf16_as_utf8(Buffer *buffer, Buffer *utf8, uint32_t len, uint8_t byt
 {
   int i = 0;
   uint16_t wc = 0;
-  
+
   if (!len) return 0;
-  
+
   for (i = 0; i < len; i += 2) {
     // Check that we are not reading past the end of the buffer
     if (len - i >= 2) {
@@ -762,7 +762,7 @@ buffer_get_utf16_as_utf8(Buffer *buffer, Buffer *utf8, uint32_t len, uint8_t byt
     }
 
     if (wc < 0x80) {
-      buffer_put_char(utf8, wc & 0xff);      
+      buffer_put_char(utf8, wc & 0xff);
     }
     else if (wc < 0x800) {
       buffer_put_char(utf8, 0xc0 | (wc>>6));
@@ -773,23 +773,23 @@ buffer_get_utf16_as_utf8(Buffer *buffer, Buffer *utf8, uint32_t len, uint8_t byt
       buffer_put_char(utf8, 0x80 | ((wc>>6) & 0x3f));
       buffer_put_char(utf8, 0x80 | (wc & 0x3f));
     }
-    
+
     if (wc == 0) {
       i += 2;
       break;
     }
   }
-  
+
   // Add null if one wasn't provided
   if ( (utf8->buf + utf8->end - 1)[0] != 0 ) {
     buffer_put_char(utf8, 0);
   }
-  
+
 #ifdef AUDIO_SCAN_DEBUG
   //DEBUG_TRACE("utf8 buffer:\n");
   //buffer_dump(utf8, 0);
 #endif
-  
+
   return i;
 }
 
@@ -800,7 +800,7 @@ buffer_get_guid(Buffer *buffer, GUID *g)
   g->Data1 = buffer_get_int_le(buffer);
   g->Data2 = buffer_get_short_le(buffer);
   g->Data3 = buffer_get_short_le(buffer);
-  
+
   buffer_get(buffer, g->Data4, 8);
 }
 #endif
@@ -834,24 +834,24 @@ get_f32le(const void *vp)
   const u_char *p = (const u_char *)vp;
   float v;
   int exponent, mantissa, negative;
-  
+
   negative = p[3] & 0x80;
   exponent = ((p[3] & 0x7F) << 1) | ((p[2] & 0x80) ? 1 : 0);
   mantissa = ((p[2] & 0x7F) << 16) | (p[1] << 8) | (p[0]);
-  
+
   if ( !(exponent || mantissa) ) {
     return 0.0;
   }
-  
+
   mantissa |= 0x800000;
   exponent = exponent ? exponent - 127 : 0;
-  
+
   v = mantissa ? ((float)mantissa) / ((float)0x800000) : 0.0;
-  
+
   if (negative) {
     v *= -1;
   }
-  
+
   if (exponent > 0) {
     v *= pow(2.0, exponent);
   }
@@ -891,24 +891,24 @@ get_f32(const void *vp)
   const u_char *p = (const u_char *)vp;
   float v;
   int exponent, mantissa, negative;
-  
+
   negative = p[0] & 0x80;
   exponent = ((p[0] & 0x7F) << 1) | ((p[1] & 0x80) ? 1 : 0);
   mantissa = ((p[1] & 0x7F) << 16) | (p[2] << 8) | (p[3]);
-  
+
   if ( !(exponent || mantissa) ) {
     return 0.0;
   }
-  
+
   mantissa |= 0x800000;
   exponent = exponent ? exponent - 127 : 0;
-  
+
   v = mantissa ? ((float)mantissa) / ((float)0x800000) : 0.0;
-  
+
   if (negative) {
     v *= -1;
   }
-  
+
   if (exponent > 0) {
     v *= pow(2.0, exponent);
   }
@@ -927,9 +927,9 @@ buffer_get_ieee_float(Buffer *buffer)
   double f;
   int expon;
   unsigned long hiMant, loMant;
-  
+
   unsigned char *bptr = buffer_ptr(buffer);
-  
+
   expon  = ((bptr[0] & 0x7F) << 8) | (bptr[1] & 0xFF);
   hiMant = ((unsigned long)(bptr[2] & 0xFF) << 24)
       |    ((unsigned long)(bptr[3] & 0xFF) << 16)
@@ -953,7 +953,7 @@ buffer_get_ieee_float(Buffer *buffer)
       f += ldexp(UnsignedToFloat(loMant), expon-=32);
     }
   }
-  
+
   buffer_consume(buffer, 10);
 
   if (bptr[0] & 0x80)
@@ -966,7 +966,7 @@ void
 put_u16(void *vp, uint16_t v)
 {
   u_char *p = (u_char *)vp;
-  
+
 	p[0] = (u_char)(v >> 8) & 0xff;
 	p[1] = (u_char)v & 0xff;
 }
@@ -1008,24 +1008,24 @@ uint32_t
 buffer_get_bits(Buffer *buffer, uint32_t bits)
 {
   uint32_t mask = CacheMask[bits];
-  
+
   //PerlIO_printf(PerlIO_stderr(), "get_bits(%d), in cache %d\n", bits, buffer->ncached);
-  
+
   while (buffer->ncached < bits) {
     // Need to read more data
-     
+
     //PerlIO_printf(PerlIO_stderr(), "reading: ");
     //buffer_dump(buffer, 1);
-    
+
     buffer->cache = (buffer->cache << 8) | buffer_get_char(buffer);
     buffer->ncached += 8;
   }
-  
+
   buffer->ncached -= bits;
-  
+
   //PerlIO_printf(PerlIO_stderr(), "cache %x, ncached %d\n", buffer->cache, buffer->ncached);
   //PerlIO_printf(PerlIO_stderr(), "return %x\n", (buffer->cache >> buffer->ncached) & mask);
-  
+
   return (buffer->cache >> buffer->ncached) & mask;
 }
 
@@ -1042,7 +1042,7 @@ buffer_get_syncsafe(Buffer *buffer, uint8_t bytes)
           value = (value << 7) | (*bptr++ & 0x7f);
           value = (value << 7) | (*bptr++ & 0x7f);
   }
-  
+
   buffer_consume(buffer, bytes);
 
   return value;

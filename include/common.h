@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
- 
+
 // Enable for debug output
 //#define AUDIO_SCAN_DEBUG
 
@@ -63,7 +63,7 @@ void hexdump(unsigned char *data, uint32_t size);
 // The return value is the internal clock count
 int64_t ReadTSC() {
    int res[2];                              // store 64 bit result here
-   
+
    #if defined (_LP64)                      // 64 bit mode
       __asm__ __volatile__  (               // serialize (save rbx)
       "xorl %%eax,%%eax \n push %%rbx \n cpuid \n"
@@ -85,7 +85,7 @@ int64_t ReadTSC() {
       "xorl %%eax,%%eax \n cpuid \n popl %%ebx \n"
        ::: "%eax", "%ecx", "%edx");
    #endif
-   
+
    return *(int64_t*)res;                   // return result
 }
 
