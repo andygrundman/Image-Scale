@@ -1,4 +1,4 @@
-Revision history for Image::Scale
+Revision history for Image:Scale
 
 0.14    2017-11-27
         - Trying to resize certain kinds of corrupt JPEGs from an in-memory variable could get
