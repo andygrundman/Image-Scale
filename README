@@ -207,7 +207,7 @@ PERFORMANCE
         resize_gm_fixed_point                   2.07/s  (0.483 s/iter) (63x faster than floating-point!)
 
 SEE ALSO
-    TODO
+    [https://metacpan.org/pod/Image::Scale](https://metacpan.org/pod/Image::Scale)
 
 AUTHOR
     Andy Grundman, <andy@hybridized.org>
