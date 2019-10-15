@@ -181,13 +181,13 @@ PERFORMANCE
 
     PNG image, 512x768 -> 200x133 (libpng 1.4.3)
 
-        GD copyResampled                        14.7/s
-        resize_gm( { filter => 'Triangle' } )   26.2/s
-        resize_gm_fixed_point                   27.7/s
-        resize_gd                               29.9/s
-        resize_gd_fixed_point                   31.9/s
+        GD copyResampled                          14.7/s
+        resize_gm( { filter => 'Triangle' } )     26.2/s
+        resize_gm_fixed_point                     27.7/s
+        resize_gd                                 29.9/s
+        resize_gd_fixed_point                     31.9/s
 
-    Here are some numbers from a machine without floating-point support.
+    Here are some numbers from a machine having no floating-point support.
     (Marvell SheevaPlug 1.2ghz ARM9, JPEG 1425x1425 -> 200x200, libjpeg 6b
     with scaling)
 
@@ -197,7 +197,7 @@ PERFORMANCE
         resize_gd_fixed_point                   7.98/s
         resize_gm_fixed_point                   9.44/s
 
-    And finally, from an even slower machine, the 240mhz Netgear ReadyNAS
+    And finally, these are from an even slower machine, the 240mhz Netgear ReadyNAS
     Duo which has extremely poor floating-point performance. (JPEG 1425x1425
     -> 200x200, libjpeg 6b with scaling)
 
