@@ -1,0 +1,4 @@
+#include<stdio.h>
+int main() {
+printf("gonna create a project that will be famous in almost 1 year time") ;
+return 0;}
