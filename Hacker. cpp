@@ -1,0 +1,5 @@
+#include<stdio.h>
+int main() {
+
+printf("going to be a hacker in a year the best of all time") ;
+return 0;}
