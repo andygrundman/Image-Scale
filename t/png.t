@@ -19,6 +19,10 @@ else {
     plan skip_all => 'Image::Scale not built with libpng support';
 }
 
+my $zlib_ng = Image::Scale->zlib_version() =~ m/\.zlib-ng$/;
+my $idiff_version = `idiff --version`;
+chomp $idiff_version;
+
 my $tmpdir = catdir( $FindBin::Bin, 'tmp' );
 if ( -d $tmpdir ) {
     File::Path::rmtree($tmpdir);
@@ -60,8 +64,16 @@ for my $resize ( @resizes ) {
         $im->save_png($outfile);
         my $data = $im->as_png();
 
-        is( _compare( _load($outfile), "${type}_${resize}_w100.png" ), 1, "PNG $type $resize 100 file ok" );
-        is( _compare( \$data, "${type}_${resize}_w100.png" ), 1, "PNG $type $resize 100 scalar ok" );
+        SKIP:
+        {
+            skip( 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 ) if $zlib_ng and !$idiff_version;
+            ok( _compare_file( $outfile, "${type}_${resize}_w100.png" ), "PNG $type $resize 100 file ok" );
+        }
+        SKIP:
+        {
+            skip( 'zlib-ng produces output unsuitable for direct binary comparison against our samples', 1 ) if $zlib_ng;
+            is( _compare( \$data, "${type}_${resize}_w100.png" ), 1, "PNG $type $resize 100 scalar ok" );
+        }
     }
 }
 
@@ -104,7 +116,11 @@ for my $resize ( @resizes ) {
         $im->$resize( { width => 75 } );
         $im->save_png($outfile);
 
-        is( _compare( _load($outfile), "rgba_multiple_${resize}.png" ), 1, "PNG multiple resize $resize ok" );
+        SKIP:
+        {
+            skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
+            ok( _compare_file( $outfile, "rgba_multiple_${resize}.png" ), "PNG multiple resize $resize ok" );
+        }
     }
 }
 
@@ -117,7 +133,11 @@ for my $resize ( @resizes ) {
     $im->resize_gd_fixed_point( { width => 100 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "rgba_resize_gd_fixed_point_w100.png" ), 1, "PNG resize_gd_fixed_point from scalar ok" );
+    SKIP:
+    {
+        skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
+        ok( _compare_file( $outfile, "rgba_resize_gd_fixed_point_w100.png" ), "PNG resize_gd_fixed_point from scalar ok" );
+    }
 }
 
 # resize multiple from PNG scalar
@@ -130,7 +150,11 @@ for my $resize ( @resizes ) {
     $im->resize_gd_fixed_point( { width => 100 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "rgba_resize_gd_fixed_point_w100.png" ), 1, "PNG resize_gd_fixed_point multiple from scalar ok" );
+    SKIP:
+    {
+        skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
+        ok( _compare_file( $outfile, "rgba_resize_gd_fixed_point_w100.png" ), "PNG resize_gd_fixed_point multiple from scalar ok" );
+    }
 }
 
 # offset image in MP3 ID3v2 tag
@@ -147,7 +171,11 @@ for my $resize ( @resizes ) {
     $im->resize_gd_fixed_point( { width => 50 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "apic_gd_fixed_point_w50.png" ), 1, "PNG resize_gd_fixed_point from offset ID3 tag ok" );
+    SKIP:
+    {
+        skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
+        ok( _compare_file( $outfile, "apic_gd_fixed_point_w50.png" ), "PNG resize_gd_fixed_point from offset ID3 tag ok" );
+    }
 }
 
 # 1-height image that would previously try to resize to 0-height
@@ -159,7 +187,11 @@ for my $resize ( @resizes ) {
     $im->resize_gd_fixed_point( { width => 100 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "height1_resize_gd_fixed_point_w100.png" ), 1, "PNG 1-height resize ok" );
+    SKIP:
+    {
+        skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
+        ok( _compare_file( $outfile, "height1_resize_gd_fixed_point_w100.png" ), "PNG 1-height resize ok" );
+    }
 }
 
 diag("libpng version: $png_version");
@@ -193,4 +225,24 @@ sub _compare {
     my $ref = _load( catfile( $FindBin::Bin, 'ref', 'png', $path ) );
 
     return $$ref eq $$test;
+}
+
+sub _compare_file {
+    my ( $test_path, $ref_basename ) = @_;
+
+    my $ref_path = catfile( $FindBin::Bin, 'ref', 'png', $ref_basename );
+
+    if ( $zlib_ng ) {
+        # If libpng turns out to be linked against zlib-ng rather plain
+        # old zlib, we end up with output files that are typically one
+        # or two bytes smaller than our current test samples, but
+        # contain the same payload nonetheless.
+        return not system( qw(idiff -q -fail 0), $test_path, $ref_path );
+    }
+    else {
+        # Simple file contents comparison.
+        my $test = _load( $test_path );
+        my $ref = _load( $ref_path );
+        return $$ref eq $$test;
+    }
 }

@@ -1,5 +1,8 @@
 Revision history for Image::Scale
 
+        - Introduce a new method, zlib_version().
+        - Fix tests when build with zlib-ng.
+
 0.14    2017-11-27
         - Trying to resize certain kinds of corrupt JPEGs from an in-memory variable could get
           stuck in an infinite loop.
