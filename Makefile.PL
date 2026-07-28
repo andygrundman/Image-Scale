@@ -9,7 +9,7 @@ use Getopt::Long;
 
 my (@INC, @LIBPATH, @LIBS);
 my ($JPEG, $PNG, $GIF, $MYEXTLIB);
-my ($JPEG_VERSION, $PNG_VERSION, $GIF_VERSION);
+my ($JPEG_VERSION, $PNG_VERSION, $ZLIB_VERSION, $GIF_VERSION);
 
 my ($help, $jpeg_inc, $jpeg_lib, $png_inc, $png_lib, $gif_inc, $gif_lib);
 my ($jpeg_static, $png_static, $gif_static);
@@ -146,8 +146,9 @@ for my $incdir ( $png_inc, @check ) {
         }
 
         $PNG_VERSION = _re_find( catfile($incdir, 'png.h'), qr/PNG_LIBPNG_VER_STRING\s+"([\d\.]+)"/ ) || 'unknown';
+        $ZLIB_VERSION = _re_find( catfile($incdir, 'zlib.h'), qr/ZLIB_VERSION\s+"([\w\.-]+)"/ ) || 'unknown';
 
-        $DEFINES .= " -DHAVE_PNG -DPNG_VERSION=$PNG_VERSION";
+        $DEFINES .= " -DHAVE_PNG -DPNG_VERSION=$PNG_VERSION -DZLIB_VERSION=$ZLIB_VERSION";
 
         last;
     }
@@ -224,7 +225,7 @@ unshift @INC, '-I. -I.. -Isrc -Iinclude';
 print "\n";
 print "Image::Scale will be built with:\n\n";
 print "  JPEG support:     " . ( $JPEG ? "yes ($jpeg_inc, libjpeg version $JPEG_VERSION)" : "no, install libjpeg (v8 recommended)" ) . "\n";
-print "  PNG support:      " . ( $PNG ? "yes ($png_inc, libpng version $PNG_VERSION)" : "no, install libpng (v1.4.x recommended)" ) . "\n";
+print "  PNG support:      " . ( $PNG ? "yes ($png_inc, libpng version $PNG_VERSION, zlib version $ZLIB_VERSION)" : "no, install libpng (v1.4.x recommended)" ) . "\n";
 print "  GIF support:      " . ( $GIF ? "yes ($gif_inc, giflib version $GIF_VERSION)" : "no, install giflib v4.1 or higher" ) . "\n";
 print "\n";
 

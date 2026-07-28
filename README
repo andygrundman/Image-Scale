@@ -165,7 +165,8 @@ METHODS
   jpeg_version()
   png_version()
   gif_version()
-    Returns the version of the image library used. Returns undef if support
+  zlib_version()
+    Returns the version of the library used. Returns undef if support
     for that image format was not built.
 
 PERFORMANCE

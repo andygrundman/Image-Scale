@@ -10,6 +10,10 @@ use Image::Scale;
 
 my $png_version = Image::Scale->png_version();
 
+my $zlib_ng = Image::Scale->zlib_version() =~ m/\.zlib-ng$/;
+my $idiff_version = `idiff --version`;
+chomp $idiff_version;
+
 my $tmpdir = catdir( $FindBin::Bin, 'tmp' );
 if ( -d $tmpdir ) {
     File::Path::rmtree($tmpdir);
@@ -45,6 +49,7 @@ for my $type ( @types ) {
 SKIP:
 {
     skip "PNG support not built, skipping file comparison tests", 8 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 8 if $zlib_ng and !$idiff_version;
 
     # Normal width resize
     for my $resize ( @resizes ) {
@@ -55,7 +60,7 @@ SKIP:
             $im->$resize( { width => 127 } );
             $im->save_png($outfile);
 
-            is( _compare( _load($outfile), "${type}_${resize}_w127.png" ), 1, "BMP $type $resize 127 file ok" );
+            ok( _compare_file( $outfile, "${type}_${resize}_w127.png" ), "BMP $type $resize 127 file ok" );
         }
     }
 }
@@ -67,19 +72,22 @@ SKIP:
 {
     skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
 
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
+
     my $outfile = _tmp("24bit_multiple_resize_gd_fixed_point.png");
     my $im = Image::Scale->new( _f("24bit.bmp") );
     $im->resize_gd_fixed_point( { width => 50 } );
     $im->resize_gd_fixed_point( { width => 127 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "24bit_multiple_resize_gd_fixed_point.png" ), 1, "BMP multiple resize_gd_fixed_point ok" );
+    ok( _compare_file( $outfile, "24bit_multiple_resize_gd_fixed_point.png" ), "BMP multiple resize_gd_fixed_point ok" );
 }
 
 # resize from BMP in scalar
 SKIP:
 {
     skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
 
     my $dataref = _load( _f("24bit.bmp") );
 
@@ -88,13 +96,14 @@ SKIP:
     $im->resize_gd_fixed_point( { width => 127 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "24bit_resize_gd_fixed_point_w127.png" ), 1, "BMP resize_gd_fixed_point from scalar ok" );
+    ok( _compare_file( $outfile, "24bit_resize_gd_fixed_point_w127.png" ), "BMP resize_gd_fixed_point from scalar ok" );
 }
 
 # resize multiple from BMP scalar
 SKIP:
 {
     skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
 
     my $dataref = _load( _f("24bit.bmp") );
 
@@ -104,7 +113,7 @@ SKIP:
     $im->resize_gd_fixed_point( { width => 127 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "24bit_resize_gd_fixed_point_w127.png" ), 1, "BMP resize_gd_fixed_point multiple from scalar ok" );
+    ok( _compare_file( $outfile, "24bit_resize_gd_fixed_point_w127.png" ), "BMP resize_gd_fixed_point multiple from scalar ok" );
 }
 
 # offset image in MP3 ID3v2 tag
@@ -122,10 +131,11 @@ SKIP:
     $im->resize_gd_fixed_point( { width => 127 } );
 
     skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
 
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "apic_gd_fixed_point_w127.png" ), 1, "BMP resize_gd_fixed_point from offset ID3 tag ok" );
+    ok( _compare_file( $outfile, "apic_gd_fixed_point_w127.png" ), "BMP resize_gd_fixed_point from offset ID3 tag ok" );
 }
 
 END {
@@ -151,10 +161,22 @@ sub _load {
     return \$data;
 }
 
-sub _compare {
-    my ( $test, $path ) = @_;
+sub _compare_file {
+    my ( $test_path, $ref_basename ) = @_;
 
-    my $ref = _load( catfile( $FindBin::Bin, 'ref', 'bmp', $path ) );
+    my $ref_path = catfile( $FindBin::Bin, 'ref', 'bmp', $ref_basename );
 
-    return $$ref eq $$test;
+    if ( $zlib_ng ) {
+        # If libpng turns out to be linked against zlib-ng rather plain
+        # old zlib, we end up with output files that are typically one
+        # or two bytes smaller than our current test samples, but
+        # contain the same payload nonetheless.
+        return not system( qw(idiff -q -fail 0), $test_path, $ref_path );
+    }
+    else {
+        # Simple file contents comparison.
+        my $test = _load( $test_path );
+        my $ref = _load( $ref_path );
+        return $$ref eq $$test;
+    }
 }

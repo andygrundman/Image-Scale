@@ -18,6 +18,10 @@ else {
     plan skip_all => 'Image::Scale not built with giflib support';
 }
 
+my $zlib_ng = Image::Scale->zlib_version() =~ m/\.zlib-ng$/;
+my $idiff_version = `idiff --version`;
+chomp $idiff_version;
+
 my $tmpdir = catdir( $FindBin::Bin, 'tmp' );
 if ( -d $tmpdir ) {
     File::Path::rmtree($tmpdir);
@@ -46,6 +50,7 @@ for my $type ( @types ) {
 SKIP:
 {
     skip "PNG support not built, skipping file comparison tests", 3 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 3 if $zlib_ng and !$idiff_version;
 
     for my $resize ( @resizes ) {
         for my $type ( @types ) {
@@ -55,7 +60,7 @@ SKIP:
             $im->$resize( { width => 100 } );
             $im->save_png($outfile);
 
-            is( _compare( _load($outfile), "${type}_${resize}_w100.png" ), 1, "GIF $type $resize 100 file ok" );
+            ok( _compare_file( $outfile, "${type}_${resize}_w100.png" ), "GIF $type $resize 100 file ok" );
         }
     }
 }
@@ -88,6 +93,7 @@ SKIP:
 SKIP:
 {
     skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
 
     my $outfile = _tmp("transparent_multiple_resize_gd_fixed_point.png");
     my $im = Image::Scale->new( _f("transparent.gif") );
@@ -95,13 +101,14 @@ SKIP:
     $im->resize_gd_fixed_point( { width => 100 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "transparent_multiple_resize_gd_fixed_point.png" ), 1, "GIF multiple resize_gd_fixed_point ok" );
+    ok( _compare_file( $outfile, "transparent_multiple_resize_gd_fixed_point.png" ), "GIF multiple resize_gd_fixed_point ok" );
 }
 
 # resize from GIF in scalar
 SKIP:
 {
     skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
 
     my $dataref = _load( _f("transparent.gif") );
 
@@ -110,13 +117,14 @@ SKIP:
     $im->resize_gd_fixed_point( { width => 100 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "transparent_resize_gd_fixed_point_w100.png" ), 1, "GIF resize_gd_fixed_point from scalar ok" );
+    ok( _compare_file( $outfile, "transparent_resize_gd_fixed_point_w100.png" ), "GIF resize_gd_fixed_point from scalar ok" );
 }
 
 # resize multiple from GIF scalar
 SKIP:
 {
     skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
 
     my $dataref = _load( _f("transparent.gif") );
 
@@ -126,7 +134,7 @@ SKIP:
     $im->resize_gd_fixed_point( { width => 100 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "transparent_resize_gd_fixed_point_w100.png" ), 1, "GIF resize_gd_fixed_point multiple from scalar ok" );
+    ok( _compare_file( $outfile, "transparent_resize_gd_fixed_point_w100.png" ), "GIF resize_gd_fixed_point multiple from scalar ok" );
 }
 
 # offset image in MP3 ID3v2 tag
@@ -144,16 +152,18 @@ SKIP:
     $im->resize_gd_fixed_point( { width => 100 } );
 
     skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
 
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "apic_gd_fixed_point_w100.png" ), 1, "GIF resize_gd_fixed_point from offset ID3 tag ok" );
+    ok( _compare_file( $outfile, "apic_gd_fixed_point_w100.png" ), "GIF resize_gd_fixed_point from offset ID3 tag ok" );
 }
 
 # Bug 17573, very thin gif could cause divide by 0 errors
 SKIP:
 {
     skip "PNG support not built, skipping file comparison tests", 1 if !$png_version;
+    skip 'zlib-ng produces output unsuitable for direct binary comparison against our samples, and idiff not installed', 1 if $zlib_ng and !$idiff_version;
 
     my $outfile = _tmp("bug17573-thin_gd_fixed_point_w40.png");
     my $im = Image::Scale->new( _f('bug17573-thin.gif') );
@@ -161,7 +171,7 @@ SKIP:
     $im->resize_gd_fixed_point( { width => 40 } );
     $im->save_png($outfile);
 
-    is( _compare( _load($outfile), "bug17573-thin_gd_fixed_point_w40.png" ), 1, "GIF resize_gd_fixed_point from thin image ok" );
+    ok( _compare_file( $outfile, "bug17573-thin_gd_fixed_point_w40.png" ), "GIF resize_gd_fixed_point from thin image ok" );
 }
 
 diag("giflib version: $gif_version");
@@ -189,10 +199,22 @@ sub _load {
     return \$data;
 }
 
-sub _compare {
-    my ( $test, $path ) = @_;
+sub _compare_file {
+    my ( $test_path, $ref_basename ) = @_;
 
-    my $ref = _load( catfile( $FindBin::Bin, 'ref', 'gif', $path ) );
+    my $ref_path = catfile( $FindBin::Bin, 'ref', 'gif', $ref_basename );
 
-    return $$ref eq $$test;
+    if ( $zlib_ng ) {
+        # If libpng turns out to be linked against zlib-ng rather plain
+        # old zlib, we end up with output files that are typically one
+        # or two bytes smaller than our current test samples, but
+        # contain the same payload nonetheless.
+        return not system( qw(idiff -q -fail 0), $test_path, $ref_path );
+    }
+    else {
+        # Simple file contents comparison.
+        my $test = _load( $test_path );
+        my $ref = _load( $ref_path );
+        return $$ref eq $$test;
+    }
 }

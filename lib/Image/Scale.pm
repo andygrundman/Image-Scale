@@ -267,7 +267,9 @@ Returns the resized PNG image as scalar data.
 
 =head2 gif_version()
 
-Returns the version of the image library used.  Returns undef if support for that image
+=head2 zlib_version()
+
+Returns the version of the library used.  Returns undef if support for that image
 format was not built.
 
 =head1 PERFORMANCE

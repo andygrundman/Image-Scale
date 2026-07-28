@@ -294,6 +294,19 @@ OUTPUT:
   RETVAL
 
 SV *
+zlib_version(void)
+CODE:
+{
+#ifdef ZLIB_VERSION
+  RETVAL = newSVpv( STRINGIFY(ZLIB_VERSION), 0 );
+#else
+  RETVAL = &PL_sv_undef;
+#endif
+}
+OUTPUT:
+  RETVAL
+
+SV *
 gif_version(void)
 CODE:
 {
