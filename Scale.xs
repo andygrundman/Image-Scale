@@ -264,6 +264,7 @@ void
 __cleanup(HV *self, image *im)
 CODE:
 {
+  PERL_UNUSED_VAR(self);
   image_finish(im);
 }
 

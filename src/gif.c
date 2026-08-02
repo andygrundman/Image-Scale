@@ -86,7 +86,6 @@ image_gif_load(image *im)
   GifByteType *ExtData;
   SavedImage *sp;
   SavedImage temp_save;
-  int BackGround = 0;
   int trans_index = 0; // transparent index if any
   ColorMapObject *ColorMap;
   GifColorType *ColorMapEntry;
@@ -133,7 +132,6 @@ image_gif_load(image *im)
         im->width  = sp->ImageDesc.Width;
         im->height = sp->ImageDesc.Height;
 
-        BackGround = im->gif->SBackGroundColor; // XXX needed?
         ColorMap = im->gif->Image.ColorMap ? im->gif->Image.ColorMap : im->gif->SColorMap;
 
         if (ColorMap == NULL) {
