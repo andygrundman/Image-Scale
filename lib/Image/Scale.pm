@@ -1,6 +1,6 @@
 package Image::Scale;
 
-use strict;
+use strict; use warnings;
 
 use constant IMAGE_SCALE_TYPE_GD       => 0;
 use constant IMAGE_SCALE_TYPE_GD_FIXED => 1;
