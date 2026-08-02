@@ -119,9 +119,9 @@ typedef struct {
   SV      *path;
   PerlIO  *fh;
   SV      *sv_data;
-  int32_t sv_offset;
-  int32_t image_offset;
-  int32_t image_length;
+  STRLEN  sv_offset;
+  off_t   image_offset;
+  off_t   image_length;
   int32_t type;
   int32_t width;
   int32_t height;
@@ -132,12 +132,15 @@ typedef struct {
   int32_t flipped;
   int32_t bpp;
   int32_t compression;
+  uint32_t bmp_data_offset;
   int32_t channels;
   int32_t has_alpha;
   int32_t orientation;
   int32_t orientation_orig;
-  int32_t memory_used;
-  int32_t outbuf_size;
+  size_t  memory_used;
+  size_t  pixbuf_size;
+  size_t  outbuf_size;
+  size_t  tmpbuf_size;
   int32_t used; // How many times the object has been used to resize
   pix     *pixbuf; // Source image
   pix     *outbuf; // Resized image
@@ -145,7 +148,7 @@ typedef struct {
   palette *palette;
 
   // Resize options
-  int32_t memory_limit;
+  size_t  memory_limit;
   int32_t target_width;
   int32_t target_height;
   int32_t keep_aspect;
@@ -188,11 +191,16 @@ put_pix_rotated(image *im, int32_t x, int32_t y, int32_t rotated_width, pix col)
 
 int image_init(HV *self, image *im);
 int image_resize(image *im);
+int image_check_buf(image *im, uint32_t min_wanted, uint32_t max_wanted);
+int image_checked_size(int width, int height, size_t item_size, size_t *items, size_t *bytes);
+void image_memory_check(image *im, size_t bytes);
+void image_memory_add(image *im, size_t bytes);
+void image_memory_sub(image *im, size_t bytes);
 void image_downsize_gd(image *im);
 void image_downsize_gd_fixed_point(image *im);
 void image_downsize_gm(image *im);
 void image_alloc(image *im, int width, int height);
-void image_bgcolor_fill(pix *buf, int size, int bgcolor);
+void image_bgcolor_fill(pix *buf, size_t size, int bgcolor);
 void image_finish(image *im);
 inline void image_get_rotated_coords(image *im, int x, int y, int *ox, int *oy);
 

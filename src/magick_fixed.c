@@ -349,6 +349,7 @@ image_downsize_gm_fixed_point(image *im)
   int columns, rows;
   int order;
   int filter;
+  size_t contribution_count, contribution_size, tmp_count, tmp_size;
   ContributionInfoFixed *contribution;
   ImageInfo source, destination;
 
@@ -388,8 +389,20 @@ image_downsize_gm_fixed_point(image *im)
   if (support < fixed_to_int(filters[filter].support))
     support = fixed_to_int(filters[filter].support);
 
-  DEBUG_TRACE("ContributionInfoFixed allocated for %ld items\n", (size_t)(2.0 * MAX(support, 0.5) + 3));
-  New(0, contribution, (size_t)(2.0 * MAX(support, 0.5) + 3), ContributionInfoFixed);
+  contribution_count = (size_t)(2.0 * MAX(support, 0.5) + 3);
+  contribution_size = contribution_count * sizeof(ContributionInfoFixed);
+  if (order) {
+    if (!image_checked_size(im->target_width, im->height, sizeof(pix), &tmp_count, &tmp_size))
+      croak("Image::Scale temporary image dimensions are too large\n");
+  }
+  else if (!image_checked_size(im->width, im->target_height, sizeof(pix), &tmp_count, &tmp_size)) {
+    croak("Image::Scale temporary image dimensions are too large\n");
+  }
+  image_memory_add(im, contribution_size + tmp_size);
+  im->tmpbuf_size = tmp_size;
+
+  DEBUG_TRACE("ContributionInfoFixed allocated for %ld items\n", contribution_count);
+  New(0, contribution, contribution_count, ContributionInfoFixed);
 
   DEBUG_TRACE("order %d, x_factor %f, y_factor %f, support %f\n", order, x_factor, y_factor, support);
 
@@ -399,7 +412,7 @@ image_downsize_gm_fixed_point(image *im)
 
   if (order) {
     DEBUG_TRACE("Allocating temporary buffer size %ld\n", im->target_width * im->height * sizeof(pix));
-    New(0, im->tmpbuf, im->target_width * im->height, pix);
+    New(0, im->tmpbuf, tmp_count, pix);
 
     // Fill new space with the bgcolor or zeros
     image_bgcolor_fill(im->tmpbuf, im->target_width * im->height, im->bgcolor);
@@ -421,7 +434,7 @@ image_downsize_gm_fixed_point(image *im)
   }
   else {
     DEBUG_TRACE("Allocating temporary buffer size %ld\n", im->width * im->target_height * sizeof(pix));
-    New(0, im->tmpbuf, im->width * im->target_height, pix);
+    New(0, im->tmpbuf, tmp_count, pix);
 
     // Fill new space with the bgcolor or zeros
     image_bgcolor_fill(im->tmpbuf, im->width * im->target_height, im->bgcolor);
@@ -443,5 +456,8 @@ image_downsize_gm_fixed_point(image *im)
   }
 
   Safefree(im->tmpbuf);
+  im->tmpbuf = NULL;
   Safefree(contribution);
+  image_memory_sub(im, contribution_size + tmp_size);
+  im->tmpbuf_size = 0;
 }

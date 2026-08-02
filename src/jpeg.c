@@ -59,23 +59,8 @@ buf_src_fill_input_buffer(j_decompress_ptr cinfo)
   // Consume the entire buffer, even if bytes are still in bytes_in_buffer
   buffer_consume(im->buf, buffer_len(im->buf));
 
-  if (im->fh != NULL) {
-    if ( !_check_buf(im->fh, im->buf, 1, BUFFER_SIZE) ) {
-      goto eof;
-    }
-  }
-  else {
-    // read from SV into buffer
-    int sv_readlen = MIN(sv_len(im->sv_data) - im->sv_offset, BUFFER_SIZE);
-
-    // corrupt JPEGs read from SV buffers need to check for EOF
-    if (sv_readlen <= 0)
-      goto eof;
-
-    DEBUG_TRACE("  Reading %d bytes of SV data @ %d\n", sv_readlen, im->sv_offset);
-    buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, sv_readlen);
-    im->sv_offset += sv_readlen;
-  }
+  if ( !image_check_buf(im, 1, BUFFER_SIZE) )
+    goto eof;
 
   cinfo->src->next_input_byte = (JOCTET *)buffer_ptr(im->buf);
   cinfo->src->bytes_in_buffer = buffer_len(im->buf);
@@ -270,10 +255,10 @@ libjpeg_output_message(j_common_ptr cinfo)
 int
 image_jpeg_read_header(image *im)
 {
-  Newz(0, im->cinfo, sizeof(struct jpeg_decompress_struct), struct jpeg_decompress_struct);
-  im->memory_used += sizeof(struct jpeg_decompress_struct);
+  image_memory_add(im, sizeof(struct jpeg_decompress_struct) + sizeof(struct jpeg_error_mgr));
+  Newz(0, im->cinfo, 1, struct jpeg_decompress_struct);
 
-  Newz(0, im->jpeg_error_pub, sizeof(struct jpeg_error_mgr), struct jpeg_error_mgr);
+  Newz(0, im->jpeg_error_pub, 1, struct jpeg_error_mgr);
 
   im->cinfo->err = jpeg_std_error(im->jpeg_error_pub);
   im->jpeg_error_pub->error_exit = libjpeg_error_handler;
@@ -586,7 +571,7 @@ image_jpeg_finish(image *im)
     jpeg_destroy_decompress(im->cinfo);
     Safefree(im->cinfo);
     im->cinfo = NULL;
-    im->memory_used -= sizeof(struct jpeg_decompress_struct);
+    image_memory_sub(im, sizeof(struct jpeg_decompress_struct) + sizeof(struct jpeg_error_mgr));
 
     Safefree(im->jpeg_error_pub);
     im->jpeg_error_pub = NULL;

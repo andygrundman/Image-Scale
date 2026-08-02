@@ -21,24 +21,8 @@ image_png_read_buf(png_structp png_ptr, png_bytep data, png_size_t len)
 
  DEBUG_TRACE("PNG read_buf wants %ld bytes, %d in buffer\n", len, buffer_len(im->buf));
 
- if (im->fh != NULL) {
-   if ( !_check_buf(im->fh, im->buf, len, MAX(len, BUFFER_SIZE)) ) {
-     goto eof;
-   }
- }
- else {
-   if (len > buffer_len(im->buf)) {
-     // read from SV into buffer
-     int sv_readlen = len - buffer_len(im->buf);
-
-     if (sv_readlen > sv_len(im->sv_data) - im->sv_offset)
-       goto eof;
-
-     DEBUG_TRACE("  Reading %d bytes of SV data @ %d\n", sv_readlen, im->sv_offset);
-     buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, sv_readlen);
-     im->sv_offset += sv_readlen;
-    }
- }
+ if ( !image_check_buf(im, (uint32_t)len, (uint32_t)MAX(len, BUFFER_SIZE)) )
+   goto eof;
 
  memcpy(data, buffer_ptr(im->buf), len);
  buffer_consume(im->buf, len);
@@ -145,15 +129,8 @@ image_png_load(image *im)
   int ofs;
   volatile unsigned char *ptr = NULL; // volatile = won't be rolled back if longjmp is called
 
-  if ( setjmp( png_jmpbuf(im->png_ptr) ) ) {
-    if (ptr != NULL)
-      Safefree(ptr);
-    image_png_finish(im);
-    return 0;
-  }
-
   // If reusing the object a second time, we need to completely create a new png struct
-  if (im->used) {
+  if (im->used || im->png_ptr == NULL) {
     DEBUG_TRACE("Recreating libpng objects\n");
     image_png_finish(im);
 
@@ -168,7 +145,21 @@ image_png_load(image *im)
 
     buffer_clear(im->buf);
 
-    image_png_read_header(im);
+    if ( !image_png_read_header(im) )
+      return 0;
+  }
+
+  if ( setjmp( png_jmpbuf(im->png_ptr) ) ) {
+    if (ptr != NULL)
+      Safefree((void *)ptr);
+    if (im->pixbuf != NULL && im->pixbuf != im->outbuf) {
+      Safefree(im->pixbuf);
+      im->pixbuf = NULL;
+      image_memory_sub(im, im->pixbuf_size);
+      im->pixbuf_size = 0;
+    }
+    image_png_finish(im);
+    return 0;
   }
 
   bit_depth  = png_get_bit_depth(im->png_ptr, im->info_ptr);

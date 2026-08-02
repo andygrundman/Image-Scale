@@ -24,26 +24,9 @@ image_gif_read_buf(GifFileType *gif, GifByteType *data, int len)
 
   //DEBUG_TRACE("GIF read_buf wants %d bytes, %d in buffer\n", len, buffer_len(im->buf));
 
-  if (im->fh != NULL) {
-    if ( !_check_buf(im->fh, im->buf, len, MAX(len, BUFFER_SIZE)) ) {
-      warn("Image::Scale not enough GIF data (%s)\n", SvPVX(im->path));
-      return 0;
-    }
-  }
-  else {
-    if (len > buffer_len(im->buf)) {
-      // read from SV into buffer
-      int sv_readlen = len - buffer_len(im->buf);
-
-      if (sv_readlen > sv_len(im->sv_data) - im->sv_offset) {
-        warn("Image::Scale not enough GIF data (%s)\n", SvPVX(im->path));
-        return 0;
-      }
-
-      DEBUG_TRACE("  Reading %d bytes of SV data @ %d\n", sv_readlen, im->sv_offset);
-      buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, sv_readlen);
-      im->sv_offset += sv_readlen;
-     }
+  if ( !image_check_buf(im, (uint32_t)len, (uint32_t)MAX(len, BUFFER_SIZE)) ) {
+    warn("Image::Scale not enough GIF data (%s)\n", SvPVX(im->path));
+    return 0;
   }
 
   memcpy(data, buffer_ptr(im->buf), len);
@@ -109,7 +92,8 @@ image_gif_load(image *im)
 
     buffer_clear(im->buf);
 
-    image_gif_read_header(im);
+    if ( !image_gif_read_header(im) )
+      return 0;
   }
 
   do {

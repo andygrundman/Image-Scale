@@ -104,11 +104,19 @@ CODE:
     im->filter        = 0;
   }
 
-  if (my_hv_exists(opts, "width"))
-    im->target_width = SvIV(*(my_hv_fetch(opts, "width")));
+  if (my_hv_exists(opts, "width")) {
+    IV value = SvIV(*(my_hv_fetch(opts, "width")));
+    if (value <= 0 || value > INT32_MAX)
+      croak("Image::Scale width must be between 1 and %d", INT32_MAX);
+    im->target_width = (int32_t)value;
+  }
 
-  if (my_hv_exists(opts, "height"))
-    im->target_height = SvIV(*(my_hv_fetch(opts, "height")));
+  if (my_hv_exists(opts, "height")) {
+    IV value = SvIV(*(my_hv_fetch(opts, "height")));
+    if (value <= 0 || value > INT32_MAX)
+      croak("Image::Scale height must be between 1 and %d", INT32_MAX);
+    im->target_height = (int32_t)value;
+  }
 
   if (!im->target_width && !im->target_height) {
     croak("Image::Scale->resize requires at least one of height or width");
@@ -125,8 +133,12 @@ CODE:
   if (my_hv_exists(opts, "bgcolor"))
     im->bgcolor = SvIV(*(my_hv_fetch(opts, "bgcolor"))) << 8 | 0xFF;
 
-  if (my_hv_exists(opts, "memory_limit"))
-    im->memory_limit = SvIV(*(my_hv_fetch(opts, "memory_limit")));
+  if (my_hv_exists(opts, "memory_limit")) {
+    IV value = SvIV(*(my_hv_fetch(opts, "memory_limit")));
+    if (value < 0)
+      croak("Image::Scale memory_limit cannot be negative");
+    im->memory_limit = (size_t)value;
+  }
 
   if (my_hv_exists(opts, "type"))
     im->resize_type = SvIV(*(my_hv_fetch(opts, "type")));
@@ -181,13 +193,19 @@ CODE:
 
   if (!im->target_height) {
     // Only width was specified
-    im->target_height = (int)((float)im->height / im->width * im->target_width);
+    int64_t derived = (int64_t)im->height * im->target_width / im->width;
+    if (derived > INT32_MAX)
+      croak("Image::Scale calculated height is too large");
+    im->target_height = (int32_t)derived;
     if (im->target_height < 1)
       im->target_height = 1;
   }
   else if (!im->target_width) {
     // Only height was specified
-    im->target_width = (int)((float)im->width / im->height * im->target_height);
+    int64_t derived = (int64_t)im->width * im->target_height / im->height;
+    if (derived > INT32_MAX)
+      croak("Image::Scale calculated width is too large");
+    im->target_width = (int32_t)derived;
     if (im->target_width < 1)
       im->target_width = 1;
   }
@@ -319,4 +337,3 @@ CODE:
 }
 OUTPUT:
   RETVAL
-

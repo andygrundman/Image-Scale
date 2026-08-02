@@ -22,31 +22,52 @@ static uint32_t ncolors[3] = { (1 << 5) - 1, (1 << 5) - 1, (1 << 5) - 1 };
 int
 image_bmp_read_header(image *im)
 {
-  int offset, palette_colors;
+  int palette_colors;
+  uint32_t dib_size, planes;
+  off_t loaded, consumed, skip;
+
+  if ( !image_check_buf(im, 54, BUFFER_SIZE) ) {
+    warn("Image::Scale unable to read BMP header (%s)\n", SvPVX(im->path));
+    return 0;
+  }
 
   buffer_consume(im->buf, 10);
 
-  offset = buffer_get_int_le(im->buf);
-  buffer_consume(im->buf, 4);
-  im->width  = buffer_get_int_le(im->buf);
-  im->height = buffer_get_int_le(im->buf);
-  buffer_consume(im->buf, 2);
+  im->bmp_data_offset = buffer_get_int_le(im->buf);
+  dib_size = buffer_get_int_le(im->buf);
+  im->width  = (int32_t)buffer_get_int_le(im->buf);
+  im->height = (int32_t)buffer_get_int_le(im->buf);
+  planes = buffer_get_short_le(im->buf);
   im->bpp = buffer_get_short_le(im->buf);
   im->compression = buffer_get_int_le(im->buf);
 
   DEBUG_TRACE("BMP offset %d, width %d, height %d, bpp %d, compression %d\n",
-    offset, im->width, im->height, im->bpp, im->compression);
+    im->bmp_data_offset, im->width, im->height, im->bpp, im->compression);
 
-  if (im->compression > 3) { // JPEG/PNG
+  if (dib_size < 40 || planes != 1 || im->width <= 0 || im->height == 0 ||
+      (im->bpp != 1 && im->bpp != 4 && im->bpp != 8 &&
+       im->bpp != 16 && im->bpp != 24 && im->bpp != 32)) {
+    warn("Image::Scale invalid BMP header (%s)\n", SvPVX(im->path));
+    return 0;
+  }
+
+  if (im->compression != BMP_BI_RGB && im->compression != BMP_BI_BITFIELDS) {
     warn("Image::Scale unsupported BMP compression type: %d (%s)\n", im->compression, SvPVX(im->path));
+    return 0;
+  }
+  if (im->compression == BMP_BI_BITFIELDS && im->bpp != 16 && im->bpp != 32) {
+    warn("Image::Scale invalid BMP bitfield depth: %d (%s)\n", im->bpp, SvPVX(im->path));
     return 0;
   }
 
   // Negative height indicates a flipped image
   if (im->height < 0) {
-    croak("flipped\n");
+    if (im->height == INT32_MIN) {
+      warn("Image::Scale invalid BMP height (%s)\n", SvPVX(im->path));
+      return 0;
+    }
     im->flipped = 1;
-    im->height = abs(im->height);
+    im->height = -im->height;
   }
 
   // Not used during reading, but lets output PNG be correct
@@ -80,12 +101,14 @@ image_bmp_read_header(image *im)
     // Read palette
     int i;
 
-    if (palette_colors > 256) {
+    if (palette_colors < 0 || palette_colors > 256 ||
+        !image_check_buf(im, (uint32_t)palette_colors * 4, (uint32_t)palette_colors * 4)) {
       warn("Image::Scale cannot read BMP with palette > 256 colors (%s)\n", SvPVX(im->path));
       return 0;
     }
 
     New(0, im->palette, 1, palette);
+    im->memory_used += sizeof(palette);
 
     for (i = 0; i < palette_colors; i++) {
       int b = buffer_get_char(im->buf);
@@ -99,6 +122,11 @@ image_bmp_read_header(image *im)
   }
   else if (im->compression == BMP_BI_BITFIELDS) {
     int pos, bit, i;
+
+    if ( !image_check_buf(im, 12, 12) ) {
+      warn("Image::Scale unable to read BMP bitfields (%s)\n", SvPVX(im->path));
+      return 0;
+    }
 
     if (im->bpp == 16) {
       // Read 16-bit bitfield masks
@@ -144,7 +172,30 @@ image_bmp_read_header(image *im)
     }
   }
 
-  // XXX make sure to skip to offset
+  loaded = im->fh != NULL
+    ? PerlIO_tell(im->fh) - im->image_offset
+    : (off_t)im->sv_offset - im->image_offset;
+  consumed = loaded - buffer_len(im->buf);
+  if ((off_t)im->bmp_data_offset < consumed ||
+      (off_t)im->bmp_data_offset > im->image_length) {
+    warn("Image::Scale invalid BMP pixel offset (%s)\n", SvPVX(im->path));
+    return 0;
+  }
+
+  skip = (off_t)im->bmp_data_offset - consumed;
+  if (skip <= (off_t)buffer_len(im->buf)) {
+    buffer_consume(im->buf, (uint32_t)skip);
+  }
+  else {
+    buffer_clear(im->buf);
+    if (im->fh != NULL) {
+      if (PerlIO_seek(im->fh, im->image_offset + im->bmp_data_offset, SEEK_SET) != 0)
+        return 0;
+    }
+    else {
+      im->sv_offset = (STRLEN)(im->image_offset + im->bmp_data_offset);
+    }
+  }
 
   return 1;
 }
@@ -157,6 +208,7 @@ image_bmp_load(image *im)
   int mask = 0;
   int i, x, y, blen;
   int starty, lasty, incy, linebytes;
+  int64_t linebits;
   unsigned char *bptr;
 
   // If reusing the object a second time, reset buffer
@@ -169,29 +221,28 @@ image_bmp_load(image *im)
     if (im->fh != NULL) {
       // reset file to begining of image
       PerlIO_seek(im->fh, im->image_offset, SEEK_SET);
-
-      if ( !_check_buf(im->fh, im->buf, 8, BUFFER_SIZE) ) {
-        warn("Image::Scale unable to read BMP header (%s)\n", SvPVX(im->path));
-        image_bmp_finish(im);
-        return 0;
-      }
     }
     else {
       // reset SV read
-      im->sv_offset = MIN(sv_len(im->sv_data) - im->image_offset, BUFFER_SIZE);
-      buffer_append(im->buf, SvPVX(im->sv_data) + im->image_offset, im->sv_offset);
+      im->sv_offset = (STRLEN)im->image_offset;
     }
 
-    image_bmp_read_header(im);
+    if ( !image_bmp_read_header(im) )
+      return 0;
   }
 
   // Calculate bits of padding per line
-  paddingbits = 32 - (im->width * im->bpp) % 32;
+  linebits = (int64_t)im->width * im->bpp;
+  if (linebits > INT32_MAX - 31) {
+    warn("Image::Scale BMP scanline is too large (%s)\n", SvPVX(im->path));
+    return 0;
+  }
+  paddingbits = 32 - linebits % 32;
   if (paddingbits == 32)
     paddingbits = 0;
 
   // Bytes per line
-  linebytes = ((im->width * im->bpp) + paddingbits) / 8;
+  linebytes = (int)((linebits + paddingbits) / 8);
 
   // No padding if RLE compressed
   if (paddingbits && (im->compression == BMP_BI_RLE4 || im->compression == BMP_BI_RLE8))
@@ -239,25 +290,10 @@ image_bmp_load(image *im)
 
         buffer_consume(im->buf, buffer_len(im->buf) - blen);
 
-        if (im->fh != NULL) {
-          // Read from file
-          if ( !_check_buf(im->fh, im->buf, im->channels, 8192) ) {
-            image_bmp_finish(im);
-            warn("Image::Scale unable to read entire BMP file (%s)\n", SvPVX(im->path));
-            return 0;
-          }
-        }
-        else {
-          // Read from scalar
-          int svbuflen = MIN(sv_len(im->sv_data) - im->sv_offset, 8192);
-
-          if (!svbuflen) {
-            image_bmp_finish(im);
-            warn("Image::Scale unable to read entire BMP file (%s)\n", SvPVX(im->path));
-            return 0;
-          }
-          buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, svbuflen);
-          im->sv_offset += svbuflen;
+        if ( !image_check_buf(im, MAX(1, im->bpp / 8), 8192) ) {
+          image_bmp_finish(im);
+          warn("Image::Scale unable to read entire BMP file (%s)\n", SvPVX(im->path));
+          return 0;
         }
 
         bptr = buffer_ptr(im->buf);
@@ -346,7 +382,7 @@ image_bmp_load(image *im)
       if (blen < linebytes) {
         // Load more from the buffer
         buffer_consume(im->buf, buffer_len(im->buf) - blen);
-        if ( !_check_buf(im->fh, im->buf, im->channels, 8192) ) {
+        if ( !image_check_buf(im, linebytes, 8192) ) {
           image_bmp_finish(im);
           warn("Image::Scale unable to read entire BMP file (%s)\n", SvPVX(im->path));
           return 0;
@@ -366,7 +402,7 @@ image_bmp_load(image *im)
         mask = 0x80;
     }
 
-    linebytes = ((im->width * im->bpp) + paddingbits) / 8;
+    linebytes = (int)((linebits + paddingbits) / 8);
 
     y += incy;
   }
@@ -384,5 +420,6 @@ image_bmp_finish(image *im)
   if (im->palette != NULL) {
     Safefree(im->palette);
     im->palette = NULL;
+    image_memory_sub(im, sizeof(palette));
   }
 }

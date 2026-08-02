@@ -1,9 +1,16 @@
 Revision history for Image::Scale
 
 0.15    2026-
+        - Fixed safety-related issues stemming from a review by Sol 5.6. It also assisted with these fixes.
+            - Enforced various offset and length boundaries.
+            - Validated resize dimensions and added additional overflow protection.
+            - PNG: Repeated decode failures are safer.
+            - BMP: Improved header validation and offset handling.
+            - memory_limit: Corrected allocation sizing and added support to GraphicsMagick temporary buffers.
         - Added missing GPL-2 LICENSE file.
-        - Introduce a new method, zlib_version().
-        - Fix tests when build with zlib-ng.
+        - zlib-ng is supported and preferred over zlib if detected at build time. (Peter Oliver)
+        - Because zlib-ng and zlib do not output bit-exact PNG files, Image comparison tests now use idiff
+          when available, and are skipped otherwise. (Peter Oliver)
 
 0.14    2017-11-27
         - Trying to resize certain kinds of corrupt JPEGs from an in-memory variable could get

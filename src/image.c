@@ -36,11 +36,98 @@
 #include "magick_fixed.c"
 
 int
+image_checked_size(int width, int height, size_t item_size, size_t *items, size_t *bytes)
+{
+  size_t count;
+
+  if (width <= 0 || height <= 0)
+    return 0;
+  if ((size_t)width > SIZE_MAX / (size_t)height)
+    return 0;
+  count = (size_t)width * (size_t)height;
+  if (item_size && count > SIZE_MAX / item_size)
+    return 0;
+
+  if (items != NULL)
+    *items = count;
+  if (bytes != NULL)
+    *bytes = count * item_size;
+  return 1;
+}
+
+void
+image_memory_check(image *im, size_t bytes)
+{
+  if (bytes > SIZE_MAX - im->memory_used ||
+      (im->memory_limit &&
+       (im->memory_used > im->memory_limit || bytes > im->memory_limit - im->memory_used))) {
+    croak("Image::Scale memory_limit exceeded (wanted to allocate %" UVuf " bytes)\n",
+      (UV)(bytes > SIZE_MAX - im->memory_used ? SIZE_MAX : im->memory_used + bytes));
+  }
+}
+
+void
+image_memory_add(image *im, size_t bytes)
+{
+  image_memory_check(im, bytes);
+  im->memory_used += bytes;
+}
+
+void
+image_memory_sub(image *im, size_t bytes)
+{
+  im->memory_used = bytes > im->memory_used ? 0 : im->memory_used - bytes;
+}
+
+int
+image_check_buf(image *im, uint32_t min_wanted, uint32_t max_wanted)
+{
+  size_t have = buffer_len(im->buf);
+  off_t loaded;
+  off_t remaining;
+  size_t wanted;
+
+  if (have >= min_wanted)
+    return 1;
+  if (max_wanted < min_wanted)
+    max_wanted = min_wanted;
+
+  if (im->fh != NULL) {
+    loaded = PerlIO_tell(im->fh) - im->image_offset;
+  }
+  else {
+    loaded = (off_t)im->sv_offset - im->image_offset;
+  }
+  remaining = im->image_length - loaded;
+  if (remaining <= 0)
+    return 0;
+  if ((off_t)(min_wanted - have) > remaining)
+    return 0;
+
+  wanted = max_wanted - have;
+  if ((off_t)wanted > remaining)
+    wanted = (size_t)remaining;
+
+  if (im->fh != NULL)
+    return _check_buf(im->fh, im->buf, min_wanted, (int)(have + wanted));
+
+  buffer_append(im->buf, SvPVX(im->sv_data) + im->sv_offset, wanted);
+  im->sv_offset += wanted;
+  return buffer_len(im->buf) >= min_wanted;
+}
+
+int
 image_init(HV *self, image *im)
 {
   unsigned char *bptr;
   char *file = NULL;
+  off_t source_size;
   int ret = 1;
+
+  im->buf              = NULL;
+  im->path             = NULL;
+  im->sv_data          = NULL;
+  im->tmpbuf           = NULL;
 
   if (my_hv_exists(self, "file")) {
     // Input from file
@@ -61,9 +148,12 @@ image_init(HV *self, image *im)
   }
 
   im->pixbuf           = NULL;
+  im->pixbuf_size      = 0;
   im->outbuf           = NULL;
   im->outbuf_size      = 0;
+  im->tmpbuf_size      = 0;
   im->type             = UNKNOWN;
+  im->memory_used      = 0;
   im->sv_offset        = 0;
   im->image_offset     = 0;
   im->image_length     = 0;
@@ -75,6 +165,8 @@ image_init(HV *self, image *im)
   im->height_inner     = 0;
   im->flipped          = 0;
   im->bpp              = 0;
+  im->compression      = 0;
+  im->bmp_data_offset  = 0;
   im->channels         = 0;
   im->has_alpha        = 0;
   im->orientation      = ORIENTATION_NORMAL;
@@ -100,30 +192,48 @@ image_init(HV *self, image *im)
   im->gif              = NULL;
 #endif
 
+  source_size = im->fh != NULL ? _file_size(im->fh) : (off_t)sv_len(im->sv_data);
+
   // Read new() options
   if (my_hv_exists(self, "offset")) {
-    im->image_offset = SvIV(*(my_hv_fetch(self, "offset")));
-    if (im->fh != NULL)
-      PerlIO_seek(im->fh, im->image_offset, SEEK_SET);
+    IV value = SvIV(*(my_hv_fetch(self, "offset")));
+    if (value < 0 || (off_t)value > source_size) {
+      image_finish(im);
+      croak("Image::Scale offset is outside the input data\n");
+    }
+    im->image_offset = (off_t)value;
   }
 
-  if (my_hv_exists(self, "length"))
-    im->image_length = SvIV(*(my_hv_fetch(self, "length")));
-
-  Newz(0, im->buf, sizeof(Buffer), Buffer);
-  buffer_init(im->buf, BUFFER_SIZE);
-  im->memory_used = BUFFER_SIZE;
-
-  // Determine type of file from magic bytes
-  if (im->fh != NULL) {
-    if ( !_check_buf(im->fh, im->buf, 8, BUFFER_SIZE) ) {
+  if (my_hv_exists(self, "length")) {
+    IV value = SvIV(*(my_hv_fetch(self, "length")));
+    if (value <= 0 || (off_t)value > source_size - im->image_offset) {
       image_finish(im);
-      croak("Unable to read image header for %s\n", file);
+      croak("Image::Scale length is outside the input data\n");
+    }
+    im->image_length = (off_t)value;
+  }
+  else {
+    im->image_length = source_size - im->image_offset;
+  }
+
+  if (im->fh != NULL) {
+    if (PerlIO_seek(im->fh, im->image_offset, SEEK_SET) != 0) {
+      image_finish(im);
+      croak("Image::Scale unable to seek to image offset\n");
     }
   }
   else {
-    im->sv_offset = MIN(sv_len(im->sv_data) - im->image_offset, BUFFER_SIZE);
-    buffer_append(im->buf, SvPVX(im->sv_data) + im->image_offset, im->sv_offset);
+    im->sv_offset = (STRLEN)im->image_offset;
+  }
+
+  Newz(0, im->buf, 1, Buffer);
+  buffer_init(im->buf, BUFFER_SIZE);
+  im->memory_used = sizeof(Buffer) + BUFFER_SIZE;
+
+  // Determine type of file from magic bytes
+  if ( !image_check_buf(im, 8, BUFFER_SIZE) ) {
+    image_finish(im);
+    croak("Unable to read image header for %s\n", file != NULL ? file : "(data)");
   }
 
   bptr = buffer_ptr(im->buf);
@@ -197,7 +307,10 @@ image_init(HV *self, image *im)
       break;
 #endif
     case BMP:
-      image_bmp_read_header(im);
+      if ( !image_bmp_read_header(im) ) {
+        ret = 0;
+        goto out;
+      }
       break;
     case UNKNOWN:
       warn("Image::Scale unknown file type (%s), first 8 bytes were: %02x %02x %02x %02x %02x %02x %02x %02x\n",
@@ -218,28 +331,26 @@ out:
 void
 image_alloc(image *im, int width, int height)
 {
-  int size = width * height * sizeof(pix);
+  size_t count, bytes;
 
-  if (im->memory_limit && im->memory_limit < im->memory_used + size) {
-    image_finish(im);
-    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)\n", im->memory_used + size);
-  }
+  if (!image_checked_size(width, height, sizeof(pix), &count, &bytes))
+    croak("Image::Scale invalid source image dimensions %d x %d\n", width, height);
 
-  DEBUG_TRACE("Allocating %d bytes for decompressed image\n", size);
+  image_memory_add(im, bytes);
+  DEBUG_TRACE("Allocating %" UVuf " bytes for decompressed image\n", (UV)bytes);
 
-  New(0, im->pixbuf, size, pix);
-  im->memory_used += size;
+  New(0, im->pixbuf, count, pix);
+  im->pixbuf_size = bytes;
 }
 
 void
-image_bgcolor_fill(pix *buf, int size, int bgcolor)
+image_bgcolor_fill(pix *buf, size_t size, int bgcolor)
 {
-  int alloc_size = size * sizeof(pix);
-  int i;
+  size_t i;
 
   if (bgcolor != 0) {
-    for (i = 0; i < alloc_size; i += sizeof(pix))
-      memcpy( ((char *)buf) + i, &bgcolor, sizeof(pix) );
+    for (i = 0; i < size; i++)
+      buf[i] = (pix)bgcolor;
   }
   else {
     Zero(buf, size, pix);
@@ -249,7 +360,7 @@ image_bgcolor_fill(pix *buf, int size, int bgcolor)
 int
 image_resize(image *im)
 {
-  int size;
+  size_t count, bytes;
   int ret = 1;
 
   // Check if we have already resized an image with this object,
@@ -257,14 +368,19 @@ image_resize(image *im)
   if (im->used) {
     DEBUG_TRACE("Object already used for a resize, resetting\n");
     if (im->outbuf != NULL) {
+      if (im->pixbuf == im->outbuf) {
+        im->pixbuf = NULL;
+        im->pixbuf_size = 0;
+      }
       Safefree(im->outbuf);
       im->outbuf = NULL;
-      im->memory_used -= im->outbuf_size;
+      image_memory_sub(im, im->outbuf_size);
+      im->outbuf_size = 0;
     }
 
 #ifdef HAVE_JPEG
     // For a JPEG we have to reset the scaled size in case we're resizing larger than before
-    if (im->type == JPEG) {
+    if (im->type == JPEG && im->cinfo != NULL) {
       im->width = im->cinfo->image_width;
       im->height = im->cinfo->image_height;
 
@@ -310,22 +426,19 @@ image_resize(image *im)
   // Special case for equal size without resizing
   if (im->width == im->target_width && im->height == im->target_height) {
     im->outbuf = im->pixbuf;
+    im->outbuf_size = im->pixbuf_size;
     goto out;
   }
 
   // Allocate space for the resized image
-  size = im->target_width * im->target_height;
-  im->outbuf_size = size * sizeof(pix);
+  if (!image_checked_size(im->target_width, im->target_height, sizeof(pix), &count, &bytes))
+    croak("Image::Scale invalid target dimensions %d x %d\n", im->target_width, im->target_height);
+  image_memory_add(im, bytes);
+  im->outbuf_size = bytes;
 
-  if (im->memory_limit && im->memory_limit < im->memory_used + im->outbuf_size) {
-    image_finish(im);
-    croak("Image::Scale memory_limit exceeded (wanted to allocate %d bytes)\n", im->memory_used + im->outbuf_size);
-  }
-
-  DEBUG_TRACE("Allocating %d bytes for resized image of size %d x %d\n",
-    im->outbuf_size, im->target_width, im->target_height);
-  New(0, im->outbuf, size, pix);
-  im->memory_used += im->outbuf_size;
+  DEBUG_TRACE("Allocating %" UVuf " bytes for resized image of size %d x %d\n",
+    (UV)im->outbuf_size, im->target_width, im->target_height);
+  New(0, im->outbuf, count, pix);
 
   // Determine padding if necessary
   if (im->keep_aspect) {
@@ -346,7 +459,7 @@ image_resize(image *im)
     }
 
     // Fill new space with the bgcolor or zeros
-    image_bgcolor_fill(im->outbuf, size, im->bgcolor);
+    image_bgcolor_fill(im->outbuf, count, im->bgcolor);
 
     DEBUG_TRACE("Using width padding %d, inner width %d, height padding %d, inner height %d, bgcolor %x\n",
       im->width_padding, im->width_inner, im->height_padding, im->height_inner, im->bgcolor);
@@ -384,6 +497,8 @@ image_resize(image *im)
   // After resizing we can release the source image memory
   Safefree(im->pixbuf);
   im->pixbuf = NULL;
+  image_memory_sub(im, im->pixbuf_size);
+  im->pixbuf_size = 0;
 
 out:
   im->used++;
@@ -429,6 +544,7 @@ image_finish(image *im)
   if (im->pixbuf != NULL && im->pixbuf != im->outbuf) { // pixbuf = outbuf if resizing to same dimensions
     Safefree(im->pixbuf);
     im->pixbuf = NULL;
+    im->pixbuf_size = 0;
   }
 
   if (im->outbuf != NULL) {
@@ -437,12 +553,18 @@ image_finish(image *im)
     im->outbuf_size = 0;
   }
 
+  if (im->tmpbuf != NULL) {
+    Safefree(im->tmpbuf);
+    im->tmpbuf = NULL;
+    im->tmpbuf_size = 0;
+  }
+
   if (im->path != NULL) {
     SvREFCNT_dec(im->path);
     im->path = NULL;
   }
 
-  DEBUG_TRACE("Freed all memory, total used: %d\n", im->memory_used);
+  DEBUG_TRACE("Freed all memory, total used: %" UVuf "\n", (UV)im->memory_used);
   im->memory_used = 0;
 }
 
