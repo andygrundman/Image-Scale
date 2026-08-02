@@ -8,7 +8,7 @@ use File::Spec::Functions;
 use Getopt::Long;
 
 my (@INC, @LIBPATH, @LIBS);
-my ($JPEG, $PNG, $GIF, $MYEXTLIB);
+my ($JPEG, $PNG, $GIF, $ZLIB_NG, $MYEXTLIB);
 my ($JPEG_VERSION, $PNG_VERSION, $ZLIB_VERSION, $GIF_VERSION);
 
 my ($help, $jpeg_inc, $jpeg_lib, $png_inc, $png_lib, $gif_inc, $gif_lib);
@@ -26,7 +26,9 @@ if ( $^O !~ /Win32/i ) {
         }
     }
 
-    push @LIBPATH, '-L/usr/local/lib';
+    for my $libdir (qw(/opt/homebrew/lib /usr/local/lib /opt/local/lib)) {
+        push @LIBPATH, '-L' . $libdir if -d $libdir;
+    }
 }
 
 my $result = GetOptions(
@@ -64,7 +66,7 @@ END
     exit 0;
 }
 
-my @check = qw(/usr/include /usr/local/include /opt/local/include);
+my @check = qw(/opt/homebrew/include /usr/include /usr/local/include /opt/local/include);
 
 # Check in environment-supplied locations before standard ones
 unshift @check, split /:/, $ENV{INCLUDE};
@@ -123,12 +125,35 @@ for my $incdir ( $jpeg_inc, @check ) {
 # Look for libpng
 for my $incdir ( $png_inc, @check ) {
     if ( $incdir && -e catfile($incdir, 'png.h') ) {
+        my $zlib_lib = '-lz';
+
         $PNG = 1;
         $png_inc = $incdir;
 
         unshift @INC, '-I' . $png_inc;
         if ($png_lib) {
             unshift @LIBPATH, '-L' . $png_lib;
+        }
+
+        # Prefer zlib-ng if it is installed
+        for my $zlib_inc ( $png_inc, @check ) {
+            next if !$zlib_inc || !-f catfile($zlib_inc, 'zlib-ng.h');
+
+            $ZLIB_NG = 1;
+            $zlib_lib = '-lz-ng';
+            $ZLIB_VERSION = _re_find( catfile($zlib_inc, 'zlib-ng.h'), qr/ZLIBNG_VERSION\s+"([\w\.-]+)"/ ) || 'unknown';
+            $ZLIB_VERSION .= '.zlib-ng';
+            unshift @INC, '-I' . $zlib_inc;
+            last;
+        }
+
+        if (!$ZLIB_NG) {
+            for my $zlib_inc ( $png_inc, @check ) {
+                next if !$zlib_inc || !-f catfile($zlib_inc, 'zlib.h');
+                $ZLIB_VERSION = _re_find( catfile($zlib_inc, 'zlib.h'), qr/ZLIB_VERSION\s+"([\w\.-]+)"/ ) || 'unknown';
+                last;
+            }
+            $ZLIB_VERSION ||= 'unknown';
         }
 
         if ($png_static) {
@@ -139,14 +164,13 @@ for my $incdir ( $png_inc, @check ) {
                 $MYEXTLIB .= $png_inc . '/../lib/libpng$(LIB_EXT) ';
             }
 
-            push @LIBS, '-lz';
+            push @LIBS, $zlib_lib;
         }
         else {
-            push @LIBS, '-lpng -lz';
+            push @LIBS, "-lpng $zlib_lib";
         }
 
         $PNG_VERSION = _re_find( catfile($incdir, 'png.h'), qr/PNG_LIBPNG_VER_STRING\s+"([\d\.]+)"/ ) || 'unknown';
-        $ZLIB_VERSION = _re_find( catfile($incdir, 'zlib.h'), qr/ZLIB_VERSION\s+"([\w\.-]+)"/ ) || 'unknown';
 
         $DEFINES .= " -DHAVE_PNG -DPNG_VERSION=$PNG_VERSION -DZLIB_VERSION=$ZLIB_VERSION";
 
@@ -221,6 +245,10 @@ if ( !$JPEG && !$PNG ) {
 }
 
 unshift @INC, '-I. -I.. -Isrc -Iinclude';
+{
+    my %seen;
+    @INC = grep { !$seen{$_}++ } @INC;
+}
 
 print "\n";
 print "Image::Scale will be built with:\n\n";
@@ -250,6 +278,13 @@ if ( $^O =~ /Win32/i ) {
 my $inc_files = join(' ', glob 'include/*.h');
 my $src_files = join(' ', glob 'src/*.c');
 
+{
+    my %seen;
+    @LIBPATH = grep { !$seen{$_}++ } @LIBPATH;
+}
+my $LDDLFLAGS = _merge_linker_flags( $Config{lddlflags}, @LIBPATH );
+my $LDFLAGS   = _merge_linker_flags( $Config{ldflags},   @LIBPATH );
+
 WriteMakefile(
     NAME              => 'Image::Scale',
     VERSION_FROM      => 'lib/Image/Scale.pm',
@@ -258,6 +293,8 @@ WriteMakefile(
     AUTHOR            => 'Andy Grundman <andy@hybridized.org>',
     INC               => join(' ', @INC),
     LIBS              => [ join(' ', @LIBPATH, @LIBS) ],
+    LDDLFLAGS         => $LDDLFLAGS,
+    LDFLAGS           => $LDFLAGS,
     DEFINE            => $DEFINES,
     MYEXTLIB          => $MYEXTLIB,
     depend            => { 'Scale.c' => "$inc_files $src_files" },
@@ -277,6 +314,7 @@ WriteMakefile(
 
 sub _re_find {
     my ( $file, $re ) = @_;
+    return undef unless -f $file;
 
     my $result;
 
@@ -290,4 +328,17 @@ sub _re_find {
     close $fh;
 
     return $result;
+}
+
+sub _merge_linker_flags {
+    my ( $base, @extra ) = @_;
+    my @flags;
+    my %seen;
+
+    # Prefer explicitly discovered/selected directories to paths inherited
+    # from the Perl installation (which may be for another architecture).
+    push @flags, grep { length && !$seen{$_}++ } @extra;
+    push @flags, grep { length && !$seen{$_}++ } split /\s+/, $base;
+
+    return join ' ', @flags;
 }
